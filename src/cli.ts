@@ -8,17 +8,31 @@ import fs from 'fs';
 import path from 'path';
 
 const API_BASE = process.env.CLAWBOARD_URL || `http://localhost:${process.env.CLAWBOARD_PORT || 9800}`;
+const TOKEN_FILE = path.join(__dirname, '..', '.api-token');
+
+function getToken(): string {
+  if (process.env.CLAWBOARD_TOKEN) return process.env.CLAWBOARD_TOKEN;
+  try {
+    return fs.readFileSync(TOKEN_FILE, 'utf-8').trim();
+  } catch {
+    return '';
+  }
+}
 
 function request(method: string, urlPath: string, body: any = null): Promise<any> {
   return new Promise((resolve, reject) => {
     const url = new URL(urlPath, API_BASE);
     const proto = url.protocol === 'https:' ? https : http;
+    const token = getToken();
     const options = {
       hostname: url.hostname,
       port: url.port,
       path: url.pathname,
       method,
-      headers: { 'Content-Type': 'application/json' } as Record<string, string>,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      } as Record<string, string>,
     };
 
     const req = proto.request(options, (res) => {

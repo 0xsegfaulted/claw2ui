@@ -11,11 +11,27 @@ SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${CLAWBOARD_PORT:-9800}"
 API="http://localhost:$PORT"
 
+# Helper to read token
+read_token() {
+  TOKEN="${CLAWBOARD_TOKEN:-}"
+  if [ -z "$TOKEN" ] && [ -f "$SCRIPT_DIR/.api-token" ]; then
+    TOKEN=$(cat "$SCRIPT_DIR/.api-token")
+  fi
+  AUTH_HEADER=""
+  if [ -n "$TOKEN" ]; then
+    AUTH_HEADER="Authorization: Bearer $TOKEN"
+  fi
+}
+
+read_token
+
 # Check if server is running
-if ! curl -s "$API/api/status" > /dev/null 2>&1; then
+if ! curl -s -H "$AUTH_HEADER" "$API/api/status" > /dev/null 2>&1; then
   echo "[claw2ui] Server not running, starting..." >&2
   cd "$SCRIPT_DIR" && bash start.sh >&2
   sleep 5
+  # Re-read token (server may have generated a new one)
+  read_token
 fi
 
 # Read input
@@ -28,6 +44,7 @@ fi
 # Publish
 RESULT=$(curl -s -X POST "$API/api/pages" \
   -H "Content-Type: application/json" \
+  -H "$AUTH_HEADER" \
   -d "$DATA")
 
 # Extract and output URL

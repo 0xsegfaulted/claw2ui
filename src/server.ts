@@ -41,15 +41,20 @@ function getOrCreateToken(): string {
 const API_TOKEN = getOrCreateToken();
 
 /**
- * Auth middleware - checks Bearer token or localhost origin
+ * Auth middleware - checks Bearer token.
+ * Read-only GET requests from localhost are allowed without token (browser dashboard).
+ * Mutating operations (POST, DELETE) always require a Bearer token to prevent CSRF.
  */
 function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  const ip = req.ip || '';
-  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
-  if (isLocal) { next(); return; }
-
   const auth = req.headers.authorization;
   if (auth && auth.startsWith('Bearer ') && auth.slice(7) === API_TOKEN) {
+    next(); return;
+  }
+
+  // Allow read-only GET requests from localhost (e.g. browser dashboard)
+  const ip = req.ip || '';
+  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  if (isLocal && req.method === 'GET') {
     next(); return;
   }
 
