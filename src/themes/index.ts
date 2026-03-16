@@ -22,7 +22,7 @@ export const DEFAULT_THEME = 'anthropic';
 
 /** Get a theme by name, falling back to default */
 export function getTheme(name?: string): Theme {
-  if (name && themes[name]) return themes[name];
+  if (name && Object.prototype.hasOwnProperty.call(themes, name)) return themes[name];
   return themes[DEFAULT_THEME];
 }
 

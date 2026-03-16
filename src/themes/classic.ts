@@ -20,7 +20,8 @@ const theme: Theme = {
 
   getDesignCSS() {
     return `
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; min-height: 100vh; margin: 0; }
+      .dark body { background-color: #111827; }
       [x-cloak] { display: none !important; }
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
