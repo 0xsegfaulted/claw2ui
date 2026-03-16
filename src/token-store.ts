@@ -6,6 +6,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { scheduleBackup } from './backup';
 
 export interface TokenRecord {
   id: string;        // first 12 chars of token, used as identifier
@@ -34,6 +35,7 @@ function loadTokens(): TokenRecord[] {
 
 function writeTokens(tokens: TokenRecord[]): void {
   fs.writeFileSync(TOKENS_FILE, JSON.stringify(tokens, null, 2), { mode: 0o600 });
+  scheduleBackup();
 }
 
 /**

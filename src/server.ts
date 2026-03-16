@@ -24,8 +24,10 @@ import { startTunnel, getPublicUrl, stopTunnel } from './tunnel';
 import { formatForAll, listPlatforms } from './platforms';
 import { saveToken as storeToken, getToken, listTokens as listAllTokens, revokeToken, findTokenById, checkDailyLimit, recordUsage, countRecentTokensByIp } from './token-store';
 import type { PageSpec } from './types';
+import { restoreFromBackup, isBackupEnabled } from './backup';
 
 const PORT = parseInt(process.env.CLAWBOARD_PORT || '9800', 10);
+const BIND = process.env.CLAWBOARD_BIND || '127.0.0.1';
 const NO_TUNNEL = process.env.CLAWBOARD_NO_TUNNEL === '1';
 
 // === Security: API Token ===
@@ -150,7 +152,9 @@ setInterval(() => {
 // === App Setup ===
 const app = express();
 
-app.set('trust proxy', 'loopback');
+// When behind a cloud reverse proxy (0.0.0.0), trust only the first proxy hop.
+// When local-only, trust loopback proxies (nginx/caddy on localhost).
+app.set('trust proxy', BIND === '0.0.0.0' ? 1 : 'loopback');
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
@@ -487,11 +491,16 @@ app.use((_req: Request, res: Response) => {
 
 // === Start Server ===
 async function main(): Promise<void> {
+  // Restore from HF Dataset backup before accepting requests
+  if (isBackupEnabled()) {
+    await restoreFromBackup();
+  }
+
   console.log(`[claw2ui] API token: ${API_TOKEN.slice(0, 8)}...`);
   console.log(`[claw2ui] Token file: ${TOKEN_FILE}`);
 
-  const server = app.listen(PORT, '127.0.0.1', () => {
-    console.log(`[claw2ui] Server running on http://127.0.0.1:${PORT} (localhost only)`);
+  const server = app.listen(PORT, BIND, () => {
+    console.log(`[claw2ui] Server running on http://${BIND}:${PORT}${BIND === '127.0.0.1' ? ' (localhost only)' : ''}`);
   });
 
   if (!NO_TUNNEL) {

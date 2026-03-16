@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import type { PageData, PageMeta, SavePageOptions, SavePageResult } from './types';
+import { scheduleBackup } from './backup';
 
 const PAGES_DIR = path.join(__dirname, '..', 'pages');
 const MAX_PAGES = 500;
@@ -49,6 +50,7 @@ export function savePage(html: string, meta: SavePageOptions = {}): SavePageResu
 
   const filePath = path.join(PAGES_DIR, `${id}.json`);
   fs.writeFileSync(filePath, JSON.stringify(pageData, null, 2));
+  scheduleBackup();
   return { id, meta: pageData.meta };
 }
 
@@ -110,6 +112,7 @@ export function deletePage(id: string): boolean {
   const filePath = path.join(PAGES_DIR, `${id}.json`);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
+    scheduleBackup();
     return true;
   }
   return false;

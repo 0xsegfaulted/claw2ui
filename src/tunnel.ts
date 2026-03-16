@@ -104,6 +104,14 @@ function startNamedTunnel(port: number, tunnelName: string, fixedUrl: string): P
  * Priority: named tunnel (env) > quick tunnel > localhost
  */
 export async function startTunnel(port: number): Promise<string> {
+  // 0. Static public URL (cloud deployment, no tunnel needed)
+  const staticUrl = process.env.CLAWBOARD_PUBLIC_URL;
+  if (staticUrl) {
+    publicUrl = staticUrl.replace(/\/+$/, '');
+    console.log(`[tunnel] Using static public URL: ${publicUrl}`);
+    return publicUrl;
+  }
+
   // 1. Named tunnel (fixed domain)
   const tunnelName = process.env.CLAWBOARD_TUNNEL_NAME;
   const tunnelUrl = process.env.CLAWBOARD_TUNNEL_URL;
@@ -136,7 +144,10 @@ export async function startTunnel(port: number): Promise<string> {
 }
 
 export function getPublicUrl(): string | null {
-  return publicUrl;
+  if (publicUrl) return publicUrl;
+  const staticUrl = process.env.CLAWBOARD_PUBLIC_URL;
+  if (staticUrl) return staticUrl.replace(/\/+$/, '');
+  return null;
 }
 
 export function stopTunnel(): void {

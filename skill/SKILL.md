@@ -48,51 +48,42 @@ Generate interactive web pages from declarative JSON specs and serve them via cl
 - **Use TTL** for ephemeral or sensitive data so pages auto-expire: `--ttl 3600000` (1 hour)
 - **Review content** before publishing — check that no sensitive information leaks through table rows, stat values, or chart labels
 
-## Project Location
+## Setup
 
-> **IMPORTANT**: Update the path below to match your Claw2UI installation.
+Claw2UI supports two modes: **remote** (connect to an existing server) and **local** (run your own server).
 
-```
-# If installed globally via npm:
-# Run `npm root -g` to find the path, then append /claw2ui
-# Example: /usr/local/lib/node_modules/claw2ui
+### Remote Mode (Recommended for most users)
 
-# If cloned from source (recommended for verification):
-# git clone https://github.com/0xsegfaulted/claw2ui.git
-# Use the path where you cloned the repo
-# Example: /home/user/projects/claw2ui
-
-CLAWBOARD_DIR="<YOUR_CLAWBOARD_PATH>"
-```
-
-## CLI Tool
-
-All operations go through the `claw2ui` CLI. Install via `npm install -g claw2ui` ([npm registry](https://www.npmjs.com/package/claw2ui)).
-
-### Commands
+Connect to a shared Claw2UI server. No tunnel or server setup needed.
 
 ```bash
-# Server lifecycle
+npm install -g claw2ui
+claw2ui register --server https://board.claw2ui.win
+# Done! Token saved to ~/.claw2ui.json automatically.
+```
+
+If you received a token manually from the server admin:
+
+```bash
+claw2ui init --server https://board.claw2ui.win --token <your-token>
+```
+
+### Local Mode (Run your own server)
+
+Clone the repo or install globally, then start the server:
+
+```bash
 claw2ui status                          # Check if server is running
 claw2ui start                           # Start server + tunnel
 claw2ui start --no-tunnel               # Start without tunnel (localhost only)
-
-# Publish a page
-claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
-claw2ui publish --html "<h1>Hello</h1>" --title "Test"
-claw2ui publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
-
-# Manage pages
-claw2ui list                            # List all pages
-claw2ui delete <page-id>                # Delete a page
 ```
 
-### Fixed Domain (Named Tunnel)
+#### Fixed Domain (Named Tunnel)
 
-If you have a Cloudflare domain configured. **Requires**: a Cloudflare account, `cloudflared` installed, and a tunnel certificate (`~/.cloudflared/cert.pem` created via `cloudflared tunnel login`).
+For a permanent URL instead of random quick tunnels. **Requires**: Cloudflare account + `cloudflared`.
 
 ```bash
-# One-time setup (requires Cloudflare account):
+# One-time setup:
 # cloudflared tunnel login
 # cloudflared tunnel create claw2ui
 # cloudflared tunnel route dns claw2ui board.yourdomain.com
@@ -102,13 +93,65 @@ export CLAWBOARD_TUNNEL_URL=https://board.yourdomain.com
 claw2ui start
 ```
 
-This gives a permanent URL that never changes across restarts. Without these env vars, `claw2ui start` uses a random quick tunnel (no Cloudflare account needed).
+#### Server Admin: Token Management
+
+Generate tokens for other users to connect to your server:
+
+```bash
+claw2ui token create                    # Generate a new token (run from project dir)
+claw2ui token list                      # List all config tokens
+claw2ui token revoke <token>            # Remove a config token
+```
+
+Registered tokens (from `/api/register`) can be managed via the admin API:
+
+```bash
+# List registered tokens (requires admin token)
+curl -H "Authorization: Bearer <admin-token>" https://board.example.com/api/tokens
+
+# Revoke by short ID
+curl -X POST -H "Authorization: Bearer <admin-token>" https://board.example.com/api/tokens/<id>/revoke
+```
+
+## CLI Tool
+
+All operations go through the `claw2ui` CLI. Install via `npm install -g claw2ui` ([npm registry](https://www.npmjs.com/package/claw2ui)).
+
+### Commands
+
+```bash
+# Connection (remote users)
+claw2ui register --server <url>         # Self-service registration with a remote server
+claw2ui init --server <url> --token <t> # Manual remote server config
+
+# Publish a page
+claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
+claw2ui publish --html "<h1>Hello</h1>" --title "Test"
+claw2ui publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
+
+# Manage pages (admin/privileged only)
+claw2ui list                            # List all pages
+claw2ui delete <page-id>                # Delete a page
+
+# Server lifecycle (local mode only)
+claw2ui status                          # Check if server is running
+claw2ui start                           # Start server + tunnel
+
+# Token management (server admin only, run from project dir)
+claw2ui token create                    # Generate a new config token
+claw2ui token list                      # List config tokens
+claw2ui token revoke <token>            # Remove a config token
+```
 
 ## Workflow
 
-### Step 1: Ensure Server is Running
+### Step 1: Ensure Connection
 
 ```bash
+# Remote: register once (token saved to ~/.claw2ui.json)
+claw2ui register --server https://board.claw2ui.win
+
+# Local: ensure server is running
 claw2ui status
 # If not running:
 claw2ui start
