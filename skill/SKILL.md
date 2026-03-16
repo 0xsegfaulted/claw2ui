@@ -58,14 +58,14 @@ Connect to a shared Claw2UI server. No tunnel or server setup needed.
 
 ```bash
 npm install -g claw2ui
-claw2ui register --server https://board.claw2ui.win
+claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 # Done! Token saved to ~/.claw2ui.json automatically.
 ```
 
 If you received a token manually from the server admin:
 
 ```bash
-claw2ui init --server https://board.claw2ui.win --token <your-token>
+claw2ui init --server https://0xsegfaulted-claw2ui.hf.space --token <your-token>
 ```
 
 ### Local Mode (Run your own server)
@@ -149,7 +149,7 @@ claw2ui token revoke <token>            # Remove a config token
 
 ```bash
 # Remote: register once (token saved to ~/.claw2ui.json)
-claw2ui register --server https://board.claw2ui.win
+claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 
 # Local: ensure server is running
 claw2ui status

@@ -215,7 +215,7 @@ Examples:
         if (!server) {
           console.error('Usage: claw2ui register --server <url>');
           console.error('\nExample:');
-          console.error('  claw2ui register --server https://board.claw2ui.win');
+          console.error('  claw2ui register --server https://0xsegfaulted-claw2ui.hf.space');
           process.exit(1);
         }
 
