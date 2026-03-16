@@ -1,0 +1,15 @@
+src/
+_research/
+.cc-connect/
+pages/
+skills/
+templates/
+.api-token
+.public-url
+.server.pid
+.gitignore
+.github/
+tsconfig.json
+clawboard.config.json
+clawboard.config.example.json
+*.map

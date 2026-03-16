@@ -166,12 +166,26 @@ Override via `clawboard.config.json`:
 
 Or env vars: `CLAWBOARD_TG_BOT_TOKEN`, `CLAWBOARD_TG_CHAT_ID`, `CLAWBOARD_TG_PROXY`
 
+### Fixed Domain (Named Tunnel)
+
+To use a permanent URL instead of random quick tunnel URLs:
+
+1. Set up Cloudflare: `cloudflared tunnel login` → `cloudflared tunnel create clawboard` → `cloudflared tunnel route dns clawboard board.yourdomain.com`
+2. Configure env vars before starting:
+```bash
+export CLAWBOARD_TUNNEL_NAME=clawboard
+export CLAWBOARD_TUNNEL_URL=https://board.yourdomain.com
+bash start.sh
+```
+
+Or add to your shell profile for persistence. The server will use the named tunnel instead of a random quick tunnel.
+
 ### Adding New Platforms
 
 To add Feishu, Discord, etc.:
-1. Create `src/platforms/<name>.js` with `formatMessage()` and `deliver()`
-2. Register in `src/platforms/index.js`
-3. Add config in `src/config.js`
+1. Create `src/platforms/<name>.ts` with `formatMessage()` and `deliver()`
+2. Register in `src/platforms/index.ts`
+3. Add config in `src/config.ts`
 
 ## When to Use ClawBoard
 

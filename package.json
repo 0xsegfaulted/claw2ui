@@ -9,17 +9,41 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "node --test test/",
+    "prepublishOnly": "npm run build"
   },
+  "files": [
+    "dist/",
+    "bin/",
+    "skill/",
+    "start.sh",
+    "stop.sh",
+    "clawboard.config.example.json",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [
     "agent",
     "ui",
     "tunnel",
     "im",
-    "dashboard"
+    "dashboard",
+    "clawboard",
+    "a2ui",
+    "cloudflare-tunnel",
+    "visualization"
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/clawboard.git"
+  },
+  "homepage": "https://github.com/anthropics/clawboard",
+  "bugs": {
+    "url": "https://github.com/anthropics/clawboard/issues"
+  },
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1",

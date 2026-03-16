@@ -7,7 +7,7 @@ cd "$SCRIPT_DIR"
 
 # Kill any existing instance
 pkill -f "node dist/server.js" 2>/dev/null
-pkill -f "cloudflared tunnel --url http://localhost" 2>/dev/null
+pkill -f "cloudflared tunnel" 2>/dev/null
 sleep 1
 
 # Remove stale URL file so we wait for the new tunnel
