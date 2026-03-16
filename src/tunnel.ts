@@ -1,6 +1,6 @@
 /**
- * Tunnel manager - exposes local server to the internet
- * Priority: named tunnel (if configured) > cloudflared quick tunnel > localtunnel
+ * Tunnel manager - exposes local server to the internet via cloudflared
+ * Priority: named tunnel (if configured) > cloudflared quick tunnel > localhost
  *
  * Named tunnel config (env vars):
  *   CLAWBOARD_TUNNEL_NAME  - cloudflared tunnel name (e.g. "claw2ui")
@@ -56,42 +56,6 @@ function startCloudflared(port: number): Promise<string> {
 }
 
 /**
- * Try localtunnel as fallback (npx-based, no install needed)
- */
-function startLocaltunnel(port: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn('npx', ['-y', 'localtunnel', '--port', String(port)], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    let output = '';
-    const timeout = setTimeout(() => {
-      reject(new Error('localtunnel timed out'));
-    }, 60000);
-
-    proc.stdout?.on('data', (data: Buffer) => {
-      output += data.toString();
-      const match = output.match(/https:\/\/[a-z0-9-]+\.loca\.lt/);
-      if (match) {
-        clearTimeout(timeout);
-        publicUrl = match[0];
-        tunnelProcess = proc;
-        resolve(publicUrl);
-      }
-    });
-
-    proc.stderr?.on('data', (data: Buffer) => {
-      output += data.toString();
-    });
-
-    proc.on('error', (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-  });
-}
-
-/**
  * Start a named cloudflared tunnel (requires `cloudflared tunnel login` + tunnel created)
  */
 function startNamedTunnel(port: number, tunnelName: string, fixedUrl: string): Promise<string> {
@@ -137,7 +101,7 @@ function startNamedTunnel(port: number, tunnelName: string, fixedUrl: string): P
 
 /**
  * Start tunnel with auto-detection
- * Priority: named tunnel (env) > quick tunnel > localtunnel > localhost
+ * Priority: named tunnel (env) > quick tunnel > localhost
  */
 export async function startTunnel(port: number): Promise<string> {
   // 1. Named tunnel (fixed domain)
@@ -162,15 +126,6 @@ export async function startTunnel(port: number): Promise<string> {
     return url;
   } catch (e: any) {
     console.log(`[tunnel] cloudflared failed: ${e.message}`);
-  }
-
-  console.log('[tunnel] Falling back to localtunnel...');
-  try {
-    const url = await startLocaltunnel(port);
-    console.log(`[tunnel] localtunnel active: ${url}`);
-    return url;
-  } catch (e: any) {
-    console.log(`[tunnel] localtunnel failed: ${e.message}`);
   }
 
   const localUrl = `http://localhost:${port}`;
