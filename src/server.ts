@@ -168,7 +168,17 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    const result = savePage(finalHtml, { title: pageTitle, ttl, spec });
+    let result;
+    try {
+      result = savePage(finalHtml, { title: pageTitle, ttl, spec });
+    } catch (saveErr: any) {
+      if (saveErr.message?.includes('Page limit reached')) {
+        res.status(507).json({ error: saveErr.message });
+        return;
+      }
+      throw saveErr;
+    }
+
     const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
     const pageUrl = `${baseUrl}/p/${result.id}`;
 

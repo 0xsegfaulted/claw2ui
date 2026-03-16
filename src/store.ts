@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid';
 import type { PageData, PageMeta, SavePageOptions, SavePageResult } from './types';
 
 const PAGES_DIR = path.join(__dirname, '..', 'pages');
+const MAX_PAGES = 500;
 
 // Ensure pages directory exists
 if (!fs.existsSync(PAGES_DIR)) {
@@ -14,9 +15,20 @@ if (!fs.existsSync(PAGES_DIR)) {
 }
 
 /**
- * Save a page and return its ID
+ * Save a page and return its ID.
+ * Enforces a maximum page count to prevent disk exhaustion.
  */
 export function savePage(html: string, meta: SavePageOptions = {}): SavePageResult {
+  const fileCount = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.json')).length;
+  if (fileCount >= MAX_PAGES) {
+    // Try cleaning expired pages before rejecting
+    listPages(); // listPages() already deletes expired pages as a side effect
+    const afterCleanup = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.json')).length;
+    if (afterCleanup >= MAX_PAGES) {
+      throw new Error(`Page limit reached (${MAX_PAGES}). Delete old pages first.`);
+    }
+  }
+
   const id = nanoid(10);
   const now = Date.now();
   const pageData: PageData = {
