@@ -1,6 +1,35 @@
 ---
 name: claw2ui
 description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill when the user explicitly asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or web-based content. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "claw2ui". If the response would benefit from charts, sortable tables, or rich layout, suggest using Claw2UI and wait for user confirmation before publishing.'
+license: MIT
+metadata:
+  openclaw:
+    emoji: "📊"
+    requires:
+      bins:
+        - node
+        - claw2ui
+      optionalBins:
+        - cloudflared
+      env:
+        - name: CLAWBOARD_TUNNEL_NAME
+          required: false
+          description: "Cloudflare named tunnel ID (only for fixed-domain setup)"
+        - name: CLAWBOARD_TUNNEL_URL
+          required: false
+          description: "Public URL for named tunnel (e.g. https://board.yourdomain.com)"
+    install:
+      - id: claw2ui-npm
+        kind: npm
+        package: claw2ui
+        bins: ["claw2ui"]
+        label: "Install Claw2UI CLI (npm install -g claw2ui)"
+        verify: "https://github.com/0xsegfaulted/claw2ui"
+      - id: cloudflared-brew
+        kind: brew
+        formula: cloudflared
+        bins: ["cloudflared"]
+        label: "Install cloudflared (optional, for fixed-domain tunnels)"
 ---
 
 # Claw2UI - Agent-to-UI Bridge
