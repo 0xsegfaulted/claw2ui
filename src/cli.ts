@@ -6,19 +6,44 @@ import http from 'http';
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
 
-const API_BASE = process.env.CLAWBOARD_URL || `http://localhost:${process.env.CLAWBOARD_PORT || 9800}`;
+interface UserConfig {
+  server?: string;
+  token?: string;
+}
+
+function loadUserConfig(): UserConfig {
+  const configPath = path.join(os.homedir(), '.claw2ui.json');
+  if (fs.existsSync(configPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    } catch {}
+  }
+  return {};
+}
+
+const userConfig = loadUserConfig();
+const envUrl = process.env.CLAWBOARD_URL;
+const API_BASE = envUrl || userConfig.server || `http://localhost:${process.env.CLAWBOARD_PORT || 9800}`;
+// Only use saved token if not overriding the server URL via env
+const API_TOKEN = process.env.CLAWBOARD_TOKEN || (envUrl ? '' : userConfig.token) || '';
 
 function request(method: string, urlPath: string, body: any = null): Promise<any> {
   return new Promise((resolve, reject) => {
     const url = new URL(urlPath, API_BASE);
     const proto = url.protocol === 'https:' ? https : http;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (API_TOKEN) {
+      headers['Authorization'] = `Bearer ${API_TOKEN}`;
+    }
     const options = {
       hostname: url.hostname,
       port: url.port,
       path: url.pathname,
       method,
-      headers: { 'Content-Type': 'application/json' } as Record<string, string>,
+      headers,
     };
 
     const req = proto.request(options, (res) => {
@@ -58,6 +83,9 @@ Commands:
   delete     Delete a page
   status     Show server status
   start      Start the server
+  register   Register with a remote server (self-service)
+  init       Configure remote server manually
+  token      Manage API tokens (server admin)
 
 Publish options:
   --html <html>        Raw HTML content
@@ -67,9 +95,23 @@ Publish options:
   --title <title>      Page title
   --ttl <ms>           Time-to-live in milliseconds (0 = forever)
 
+Register options:
+  --server <url>       Remote server URL
+
+Init options:
+  --server <url>       Remote server URL
+  --token <token>      API token
+
+Token subcommands:
+  token create         Generate a new config token
+  token list           List config tokens
+  token revoke <token> Remove a config token
+
 Examples:
   claw2ui publish --spec-file spec.json --title "Dashboard"
   claw2ui publish --html "<h1>Hello</h1>" --title "Test"
+  claw2ui register --server https://board.example.com
+  claw2ui init --server https://board.example.com --token <token>
   claw2ui status`);
     process.exit(0);
   }
@@ -156,13 +198,134 @@ Examples:
         break;
       }
 
+      case 'register': {
+        const server = getArg(args, '--server');
+        if (!server) {
+          console.error('Usage: claw2ui register --server <url>');
+          console.error('\nExample:');
+          console.error('  claw2ui register --server https://board.claw2ui.win');
+          process.exit(1);
+        }
+
+        const registerUrl = new URL('/api/register', server);
+        const regProto = registerUrl.protocol === 'https:' ? https : http;
+
+        const result = await new Promise<any>((resolve, reject) => {
+          const req = regProto.request({
+            hostname: registerUrl.hostname,
+            port: registerUrl.port,
+            path: registerUrl.pathname,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }, (res) => {
+            let data = '';
+            res.on('data', (chunk: Buffer) => data += chunk);
+            res.on('end', () => {
+              try { resolve(JSON.parse(data)); }
+              catch { resolve(data); }
+            });
+          });
+          req.on('error', reject);
+          req.write('{}');
+          req.end();
+        });
+
+        if (result.error || !result.token) {
+          console.error('Registration failed:', result.error || 'Invalid response from server');
+          process.exit(1);
+        }
+
+        // Save to ~/.claw2ui.json
+        const regConfigPath = path.join(os.homedir(), '.claw2ui.json');
+        fs.writeFileSync(regConfigPath, JSON.stringify({ server, token: result.token }, null, 2) + '\n', { mode: 0o600 });
+        console.log('Registration successful!');
+        console.log(`Config saved to ${regConfigPath}`);
+        console.log(`Server: ${server}`);
+        console.log('You can now publish pages with: claw2ui publish --html "<h1>Hello</h1>"');
+        break;
+      }
+
+      case 'init': {
+        const initServer = getArg(args, '--server');
+        const initToken = getArg(args, '--token');
+        if (!initServer || !initToken) {
+          console.error('Usage: claw2ui init --server <url> --token <token>');
+          process.exit(1);
+        }
+        const initConfigPath = path.join(os.homedir(), '.claw2ui.json');
+        fs.writeFileSync(initConfigPath, JSON.stringify({ server: initServer, token: initToken }, null, 2) + '\n', { mode: 0o600 });
+        console.log(`Config saved to ${initConfigPath}`);
+        console.log(`Server: ${initServer}`);
+        break;
+      }
+
+      case 'token': {
+        const subCmd = args[1];
+        const tokenConfigPath = path.join(process.cwd(), 'claw2ui.config.json');
+
+        switch (subCmd) {
+          case 'create': {
+            const newToken = crypto.randomBytes(24).toString('hex');
+            let config: any = {};
+            if (fs.existsSync(tokenConfigPath)) {
+              config = JSON.parse(fs.readFileSync(tokenConfigPath, 'utf-8'));
+            }
+            if (!config.tokens) config.tokens = [];
+            config.tokens.push(newToken);
+            fs.writeFileSync(tokenConfigPath, JSON.stringify(config, null, 2) + '\n');
+            console.log(newToken);
+            break;
+          }
+          case 'list': {
+            if (!fs.existsSync(tokenConfigPath)) {
+              console.log('No config found.');
+              break;
+            }
+            const config = JSON.parse(fs.readFileSync(tokenConfigPath, 'utf-8'));
+            const tokens: string[] = config.tokens || [];
+            if (tokens.length === 0) {
+              console.log('No tokens.');
+            } else {
+              for (const t of tokens) {
+                console.log(t);
+              }
+            }
+            break;
+          }
+          case 'revoke': {
+            const target = args[2];
+            if (!target) { console.error('Usage: claw2ui token revoke <token>'); process.exit(1); }
+            if (!fs.existsSync(tokenConfigPath)) { console.error('No config found.'); process.exit(1); }
+            const config = JSON.parse(fs.readFileSync(tokenConfigPath, 'utf-8'));
+            const before = (config.tokens || []).length;
+            config.tokens = (config.tokens || []).filter((t: string) => t !== target);
+            if (config.tokens.length === before) {
+              console.error('Token not found.');
+              process.exit(1);
+            }
+            fs.writeFileSync(tokenConfigPath, JSON.stringify(config, null, 2) + '\n');
+            console.log('Token revoked.');
+            break;
+          }
+          default:
+            console.error('Usage: claw2ui token <create|list|revoke>');
+            process.exit(1);
+        }
+        break;
+      }
+
       default:
         console.error(`Unknown command: ${command}. Run 'claw2ui --help' for usage.`);
         process.exit(1);
     }
   } catch (err: any) {
     if (err.code === 'ECONNREFUSED') {
-      console.error('Error: Claw2UI server is not running. Start it with: claw2ui start');
+      if (API_BASE.includes('localhost') || API_BASE.includes('127.0.0.1')) {
+        console.error('Error: Claw2UI server is not running. Start it with: claw2ui start');
+        console.error('Or connect to a remote server: claw2ui register --server <url>');
+      } else {
+        console.error(`Error: Cannot connect to ${API_BASE}`);
+      }
     } else {
       console.error('Error:', err.message);
     }
