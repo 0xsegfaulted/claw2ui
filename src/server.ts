@@ -6,12 +6,11 @@
  * Pages are accessible via tunnel URL even without a public IP.
  *
  * API:
- *   POST /api/pages          - Create a page (JSON body: { html?, spec?, title?, ttl?, deliver? })
+ *   POST /api/pages          - Create a page (JSON body: { html?, spec?, title?, ttl? })
  *   GET  /api/pages          - List all pages
  *   GET  /api/pages/:id      - Get page metadata
  *   DELETE /api/pages/:id    - Delete a page
- *   POST /api/pages/:id/deliver - Deliver page to a platform (e.g., Telegram)
- *   GET  /api/platforms      - List registered platforms and their config status
+ *   GET  /api/platforms      - List available format platforms
  *   GET  /api/status         - Server status & public URL
  *   GET  /p/:id              - View a rendered page (public, no auth)
  */
@@ -22,7 +21,7 @@ import crypto from 'crypto';
 import { savePage, getPage, listPages, deletePage } from './store';
 import { renderPage, renderRawPage } from './renderer';
 import { startTunnel, getPublicUrl, stopTunnel } from './tunnel';
-import { formatForPlatform, deliverToPlatform, listPlatforms, formatForAll } from './platforms';
+import { formatForAll, listPlatforms } from './platforms';
 import type { PageSpec } from './types';
 
 const PORT = parseInt(process.env.CLAWBOARD_PORT || '9800', 10);
@@ -140,7 +139,7 @@ function escHtml(s: string): string {
 
 app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
   try {
-    let { html, spec, title, ttl, type, components, theme, deliver } = req.body;
+    let { html, spec, title, ttl, components, theme, deliver } = req.body;
 
     if (!spec && !html && components) {
       spec = { title: title || req.body.title, theme, components };
@@ -164,7 +163,7 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    const result = savePage(finalHtml, { title: pageTitle, ttl, type, spec });
+    const result = savePage(finalHtml, { title: pageTitle, ttl, spec });
     const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
     const pageUrl = `${baseUrl}/p/${result.id}`;
 
@@ -173,23 +172,15 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
       url: pageUrl,
       title: pageTitle,
       meta: result.meta,
+      formats: getPublicUrl() ? formatForAll(spec, pageUrl, pageTitle) : undefined,
     };
 
-    response.formats = formatForAll(spec, pageUrl, pageTitle);
-
-    if (deliver && deliver.platform) {
-      const platform: string = deliver.platform;
-      if (!getPublicUrl()) {
-        response.delivery = { platform, success: false, error: 'No public URL available. Start tunnel first.' };
-      } else {
-        const message = formatForPlatform(platform, spec, pageUrl, pageTitle);
-        if (message) {
-          const deliveryResult = await deliverToPlatform(platform, message, deliver);
-          response.delivery = { platform, ...deliveryResult };
-        } else {
-          response.delivery = { platform, success: false, error: `Unknown platform: ${platform}` };
-        }
-      }
+    if (deliver) {
+      response.delivery = {
+        platform: deliver.platform || 'unknown',
+        success: false,
+        error: '"deliver" is deprecated. Use response.formats for platform-specific summaries, then deliver via your agent/cc-connect.',
+      };
     }
 
     res.json(response);
@@ -210,7 +201,13 @@ app.get('/api/pages/:id', requireAuth, (req: Request, res: Response) => {
   const page = getPage(paramStr(req.params.id));
   if (!page) { res.status(404).json({ error: 'Page not found' }); return; }
   const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
-  res.json({ ...page.meta, id: page.id, url: `${baseUrl}/p/${page.id}` });
+  const pageUrl = `${baseUrl}/p/${page.id}`;
+  res.json({
+    ...page.meta,
+    id: page.id,
+    url: pageUrl,
+    formats: getPublicUrl() ? formatForAll(page.spec, pageUrl, page.meta?.title) : undefined,
+  });
 });
 
 app.delete('/api/pages/:id', requireAuth, (req: Request, res: Response) => {
@@ -220,28 +217,19 @@ app.delete('/api/pages/:id', requireAuth, (req: Request, res: Response) => {
   res.json({ deleted: true });
 });
 
-app.post('/api/pages/:id/deliver', requireAuth, async (req: Request, res: Response) => {
-  try {
-    if (!isValidPageId(paramStr(req.params.id))) { res.status(400).json({ error: 'Invalid page ID' }); return; }
-
-    const page = getPage(paramStr(req.params.id), false);
-    if (!page) { res.status(404).json({ error: 'Page not found' }); return; }
-
-    const { platform, chatId, botToken, proxy } = req.body;
-    if (!platform) { res.status(400).json({ error: '"platform" is required (e.g., "telegram")' }); return; }
-
-    const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
-    const pageUrl = `${baseUrl}/p/${page.id}`;
-
-    const message = formatForPlatform(platform, page.spec, pageUrl, page.meta?.title);
-    if (!message) { res.status(400).json({ error: `Unknown platform: ${platform}` }); return; }
-
-    const result = await deliverToPlatform(platform, message, { chatId, botToken, proxy });
-    res.json({ platform, ...result });
-  } catch (err) {
-    console.error('[api] Error delivering page:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+// Deprecated: deliver endpoint returns formats instead
+app.post('/api/pages/:id/deliver', requireAuth, (req: Request, res: Response) => {
+  if (!isValidPageId(paramStr(req.params.id))) { res.status(400).json({ error: 'Invalid page ID' }); return; }
+  const page = getPage(paramStr(req.params.id), false);
+  if (!page) { res.status(404).json({ error: 'Page not found' }); return; }
+  const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
+  const pageUrl = `${baseUrl}/p/${page.id}`;
+  res.json({
+    platform: req.body?.platform || 'unknown',
+    success: false,
+    error: 'Delivery is deprecated. Use the "formats" field below to deliver via your agent.',
+    formats: formatForAll(page.spec, pageUrl, page.meta?.title),
+  });
 });
 
 app.get('/api/platforms', requireAuth, (_req: Request, res: Response) => {

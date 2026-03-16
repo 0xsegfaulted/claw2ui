@@ -43,7 +43,7 @@ export interface SavePageResult {
   meta: PageMeta;
 }
 
-// === Platform Types ===
+// === Platform Types (format-only, no delivery) ===
 
 export interface PlatformMessage {
   text: string;
@@ -59,39 +59,6 @@ export interface InlineKeyboardButton {
   text: string;
   url?: string;
   callback_data?: string;
-}
-
-export interface DeliveryResult {
-  success: boolean;
-  messageId?: number;
-  chatId?: number;
-  error?: string;
-}
-
-export interface DeliveryOverrides {
-  botToken?: string;
-  chatId?: string;
-  proxy?: string;
-  platform?: string;
-}
-
-export interface PlatformConfig {
-  botToken: string | null;
-  chatId: string | null;
-  proxy: string | null;
-}
-
-export interface Config {
-  platforms: {
-    telegram: PlatformConfig;
-    [key: string]: PlatformConfig;
-  };
-}
-
-export interface PlatformInfo {
-  id: string;
-  name: string;
-  configured: boolean;
 }
 
 // === Table Column Types ===

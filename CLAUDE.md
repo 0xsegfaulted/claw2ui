@@ -29,38 +29,40 @@ npm start
 
 ## How to Publish Pages
 
-### Step 1: Write a spec file (recommended)
+### CLI (recommended)
 ```bash
-cat > /tmp/clawboard_page.json << 'SPECEOF'
-{
-  "title": "My Dashboard",
-  "components": [
-    { "type": "container", "children": [
-      { "type": "header", "props": { "title": "Dashboard", "subtitle": "Overview" } },
-      { "type": "stat", "props": { "label": "Users", "value": "1,234", "change": 12.5 } }
-    ]}
-  ]
-}
-SPECEOF
+# From spec file
+clawboard publish --spec-file /tmp/page.json --title "Dashboard"
+
+# Raw HTML
+clawboard publish --html "<h1>Hello</h1>" --title "Test"
+
+# With TTL (auto-expire)
+clawboard publish --spec-file /tmp/page.json --title "Temp" --ttl 3600000
+
+# Manage pages
+clawboard list
+clawboard delete <page-id>
+clawboard status
 ```
 
-### Step 2: Publish and get URL
+### API
 ```bash
+# Publish spec
 URL=$(curl -s -X POST http://localhost:9800/api/pages \
   -H "Content-Type: application/json" \
   -d @/tmp/clawboard_page.json | python3 -c "import sys,json; print(json.load(sys.stdin)['url'])")
-echo "$URL"
-```
 
-### Alternative: Publish raw HTML
-```bash
+# Publish raw HTML
 URL=$(curl -s -X POST http://localhost:9800/api/pages \
   -H "Content-Type: application/json" \
-  -d '{"html":"<div class=\"p-8\"><h1 class=\"text-3xl font-bold\">Hello</h1></div>","title":"Test"}' \
+  -d '{"html":"<h1>Hello</h1>","title":"Test"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['url'])")
 ```
 
 Raw HTML fragments are automatically wrapped with Tailwind CSS, Alpine.js, and Chart.js.
+
+The API response includes `formats` with platform-specific summaries (e.g. `formats.telegram`) that the agent can use when sending messages.
 
 ## A2UI Component Spec Format
 
@@ -116,56 +118,6 @@ Raw HTML fragments are automatically wrapped with Tailwind CSS, Alpine.js, and C
 - `header` - Props: `title`, `subtitle`
 - `link` - Props: `href`, `label`
 
-## Platform Delivery (Rich IM Messages)
-
-Instead of just sending a URL, ClawBoard can deliver rich formatted messages directly to IM platforms.
-
-### Telegram Delivery (Auto)
-
-Add `"deliver": { "platform": "telegram" }` to the create request to auto-send a formatted summary to Telegram with an "Open Dashboard" inline button:
-
-```bash
-curl -s -X POST http://localhost:9800/api/pages \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "My Dashboard",
-    "components": [...],
-    "deliver": { "platform": "telegram" }
-  }'
-```
-
-The Telegram message includes:
-- Formatted title and subtitle
-- Key metrics from `stat` components
-- First rows from `table` components
-- Inline keyboard button to open the full interactive page
-
-### Deliver an Existing Page
-
-```bash
-curl -s -X POST http://localhost:9800/api/pages/<id>/deliver \
-  -H "Content-Type: application/json" \
-  -d '{ "platform": "telegram" }'
-```
-
-### Configuration
-
-Config is auto-detected from cc-connect (`~/.cc-connect/config.toml`) and `CC_SESSION_KEY` env var.
-Override via `clawboard.config.json`:
-```json
-{
-  "platforms": {
-    "telegram": {
-      "botToken": "auto",
-      "chatId": "YOUR_CHAT_ID",
-      "proxy": "auto"
-    }
-  }
-}
-```
-
-Or env vars: `CLAWBOARD_TG_BOT_TOKEN`, `CLAWBOARD_TG_CHAT_ID`, `CLAWBOARD_TG_PROXY`
-
 ### Fixed Domain (Named Tunnel)
 
 To use a permanent URL instead of random quick tunnel URLs:
@@ -180,13 +132,6 @@ bash start.sh
 
 Or add to your shell profile for persistence. The server will use the named tunnel instead of a random quick tunnel.
 
-### Adding New Platforms
-
-To add Feishu, Discord, etc.:
-1. Create `src/platforms/<name>.ts` with `formatMessage()` and `deliver()`
-2. Register in `src/platforms/index.ts`
-3. Add config in `src/config.ts`
-
 ## When to Use ClawBoard
 
 Use ClawBoard when the user asks for:
@@ -196,9 +141,7 @@ Use ClawBoard when the user asks for:
 - Reports with visual layout
 - Any content where a web page is better than plain text
 
-**For Telegram users**: Always use `deliver: { platform: "telegram" }` to send rich messages inline. The user sees a formatted summary immediately, with a button to open the full interactive dashboard.
-
-**For other platforms**: Include the URL in your response text.
+Include the URL in your response text. The API also returns platform-specific formatted summaries in `response.formats` that you can use for richer IM messages.
 
 ## Example: Full Dashboard
 

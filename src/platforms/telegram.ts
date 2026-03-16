@@ -1,12 +1,8 @@
 /**
- * Telegram Platform - Formats page specs as rich Telegram messages
- * and delivers them via the Telegram Bot API.
+ * Telegram Platform - Formats page specs as rich Telegram messages.
+ * Only formatting, no delivery. Delivery is the agent's responsibility.
  */
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import type { Component, PageSpec, PlatformMessage, DeliveryResult, InlineKeyboardMarkup } from '../types';
-
-const execFileAsync = promisify(execFile);
+import type { Component, PageSpec, PlatformMessage, InlineKeyboardMarkup } from '../types';
 
 /**
  * Format a page spec as a Telegram HTML message
@@ -118,61 +114,6 @@ export function formatRawMessage(title: string, url: string): PlatformMessage {
   };
   if (url.startsWith('https://')) msg.reply_markup = inlineButton('Open Page', url);
   return msg;
-}
-
-/**
- * Deliver a message via Telegram Bot API (sendMessage)
- */
-export async function deliver(
-  botToken: string,
-  chatId: string,
-  message: PlatformMessage,
-  proxy: string | null
-): Promise<DeliveryResult> {
-  const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-
-  const body: Record<string, any> = {
-    chat_id: chatId,
-    text: message.text,
-    parse_mode: message.parse_mode || 'HTML',
-    disable_web_page_preview: false,
-  };
-
-  if (message.reply_markup) {
-    body.reply_markup = message.reply_markup;
-  }
-
-  const args = [
-    '-s', '-X', 'POST',
-    apiUrl,
-    '-H', 'Content-Type: application/json',
-    '-d', JSON.stringify(body),
-    '--connect-timeout', '15',
-    '--max-time', '30',
-  ];
-
-  if (proxy) {
-    args.push('-x', proxy);
-  }
-
-  try {
-    const { stdout } = await execFileAsync('curl', args, { timeout: 35000 });
-    const response = JSON.parse(stdout);
-
-    if (!response.ok) {
-      console.error('[telegram] API error:', response.description);
-      return { success: false, error: response.description };
-    }
-
-    return {
-      success: true,
-      messageId: response.result?.message_id,
-      chatId: response.result?.chat?.id,
-    };
-  } catch (err: any) {
-    console.error('[telegram] Delivery failed:', err.message);
-    return { success: false, error: err.message };
-  }
 }
 
 // === Helpers ===

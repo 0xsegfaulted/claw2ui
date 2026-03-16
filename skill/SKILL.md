@@ -36,18 +36,13 @@ clawboard start                           # Start server + tunnel
 clawboard start --no-tunnel               # Start without tunnel (localhost only)
 
 # Publish a page
-clawboard publish --spec-file /tmp/page.json --title "Dashboard"              # From spec file
-clawboard publish --spec-file /tmp/page.json --title "Dashboard" --deliver telegram  # + Telegram delivery
-clawboard publish --html "<h1>Hello</h1>" --title "Test"                      # Raw HTML
+clawboard publish --spec-file /tmp/page.json --title "Dashboard"
+clawboard publish --html "<h1>Hello</h1>" --title "Test"
 clawboard publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
 
 # Manage pages
 clawboard list                            # List all pages
 clawboard delete <page-id>                # Delete a page
-
-# Deliver existing page to Telegram
-clawboard deliver <page-id>               # Default: telegram
-clawboard deliver <page-id> telegram      # Explicit platform
 ```
 
 ### Fixed Domain (Named Tunnel)
@@ -90,17 +85,17 @@ cat > /tmp/clawboard_page.json << 'SPECEOF'
 SPECEOF
 ```
 
-### Step 3: Publish and Deliver
+### Step 3: Publish
 
 ```bash
-clawboard publish --spec-file /tmp/clawboard_page.json --title "Dashboard" --deliver telegram
+clawboard publish --spec-file /tmp/clawboard_page.json --title "Dashboard"
 ```
 
-Outputs the public URL. If `--deliver telegram` is set, also sends a rich summary to Telegram with an "Open Dashboard" button.
+Outputs the public URL.
 
 ### Step 4: Share the URL
 
-Include the URL in your response. For Telegram users, the `--deliver telegram` flag already sent a rich formatted message inline.
+Include the URL in your response to the user.
 
 ## Available Components
 

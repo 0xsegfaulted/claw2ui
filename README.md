@@ -8,7 +8,7 @@ ClawBoard takes a declarative JSON spec (or raw HTML) and renders it into a full
 
 - **30+ UI components** — stats, charts, tables, tabs, modals, forms, and more
 - **Zero-config tunneling** — automatic Cloudflare quick tunnel, or bring your own domain
-- **Platform delivery** — send rich summaries to Telegram (more platforms coming)
+- **Platform formatting** — API returns platform-specific summaries (Telegram, etc.) for agent delivery
 - **Dark mode** — auto-detects system preference
 - **CLI & API** — publish pages from scripts, agents, or any HTTP client
 - **File-based storage** — no database needed
@@ -57,7 +57,6 @@ clawboard publish --spec-file <file> --title "Title"  # Publish from spec
 clawboard publish --html "<h1>Hi</h1>" --title "Test" # Publish raw HTML
 clawboard list                     # List all pages
 clawboard delete <page-id>         # Delete a page
-clawboard deliver <page-id> telegram  # Send to Telegram
 ```
 
 ### Publish Options
@@ -70,7 +69,6 @@ clawboard deliver <page-id> telegram  # Send to Telegram
 | `--file <path>` | Read HTML from file |
 | `--title <title>` | Page title |
 | `--ttl <ms>` | Time-to-live in milliseconds (0 = forever) |
-| `--deliver <platform>` | Deliver to platform after publish (e.g. `telegram`) |
 
 ### API
 
@@ -204,9 +202,8 @@ cp /path/to/clawboard/skill/SKILL.md ~/.claude/skills/clawboard/SKILL.md
 
 ## Adding New Platforms
 
-1. Create `src/platforms/<name>.ts` with `formatMessage()` and `deliver()` functions
+1. Create `src/platforms/<name>.ts` with `formatMessage()` and `formatRawMessage()` functions
 2. Register in `src/platforms/index.ts`
-3. Add config in `src/config.ts`
 
 ## Development
 
