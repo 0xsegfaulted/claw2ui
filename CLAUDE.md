@@ -83,6 +83,8 @@ Raw HTML fragments are automatically wrapped with Tailwind CSS, Alpine.js, and C
 - `card` - Card with border/shadow. Props: `title`, `subtitle`
 - `tabs` - Tabbed content. Props: `tabs: [{ id, label, children }]`
 - `accordion` - Collapsible sections. Props: `items: [{ title, children }]`
+- `list` - Flex list. Props: `direction` (vertical/horizontal), `gap`, `align`
+- `modal` - Dialog popup. Props: `title`. First child = trigger, rest = content
 
 **Data Display:**
 - `stat` - KPI card. Props: `label`, `value`, `change` (%), `icon`
@@ -95,11 +97,19 @@ Raw HTML fragments are automatically wrapped with Tailwind CSS, Alpine.js, and C
 - `button` - Props: `label`, `variant` (primary/secondary/danger/outline)
 - `text-field` - Props: `label`, `placeholder`, `value`
 - `select` - Props: `label`, `options: [{ value, label }]`
+- `checkbox` - Props: `label`, `value` (boolean)
+- `choice-picker` - Single/multi select. Props: `label`, `options: [{value, label}]`, `value: [selected]`, `variant` (mutuallyExclusive/multipleSelection), `displayStyle` (checkbox/chips)
+- `slider` - Range slider. Props: `label`, `min`, `max`, `value`
+- `date-time-input` - Date/time picker. Props: `label`, `value` (ISO 8601), `enableDate`, `enableTime`, `min`, `max`
 
 **Media:**
+- `icon` - Material Icon. Props: `name` (e.g. "settings", "search", "delete"), `size` (px)
 - `text` - Props: `content`, `size`, `bold`
 - `code` - Props: `content`, `language`
 - `html` - Raw HTML. Props: `content`
+- `image` - Props: `src`, `alt`
+- `video` - Video player. Props: `url`, `poster`
+- `audio-player` - Audio player. Props: `url`, `description`
 - `divider`, `spacer`
 
 **Navigation:**

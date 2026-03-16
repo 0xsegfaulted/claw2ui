@@ -280,7 +280,7 @@ app.get('/p/:id', (req: Request, res: Response) => {
   res.header('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net",
-    "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+    "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com",
     "img-src 'self' data: https:",
     "font-src 'self' https:",
     "connect-src 'self'",

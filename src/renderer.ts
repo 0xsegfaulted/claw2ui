@@ -3,10 +3,10 @@
  * into self-contained interactive HTML pages.
  *
  * Component types supported:
- *   layout: container, row, column, card, tabs, accordion
+ *   layout: container, row, column, card, tabs, accordion, list, modal
  *   data:   stat, table, chart (line, bar, pie, doughnut, radar, area)
- *   input:  button, text-field, select
- *   media:  image, markdown, code, html, text, divider, spacer
+ *   input:  button, text-field, select, checkbox, choice-picker, slider, date-time-input
+ *   media:  icon, image, video, audio-player, markdown, code, html, text, divider, spacer
  *   nav:    header, link
  */
 import type { Component, PageSpec, ColumnDef } from './types';
@@ -233,6 +233,139 @@ export function renderComponent(comp: Component): string {
       return `<a href="${esc(href)}" target="${p.target || '_blank'}" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">${esc(p.label || p.href || 'Link')}</a>`;
     }
 
+    // === A2UI Standard Components ===
+
+    case 'icon':
+      return `<span class="material-icons text-gray-600 dark:text-gray-400" style="font-size:${p.size || 24}px">${iconName(p.name)}</span>`;
+
+    case 'video': {
+      const videoSrc = (p.url || '').replace(/^\s*javascript:/i, '');
+      return `
+        <video src="${esc(videoSrc)}" controls class="rounded-lg w-full max-w-2xl" preload="metadata"
+          ${p.poster ? `poster="${esc(p.poster)}"` : ''}>
+          Your browser does not support the video tag.
+        </video>`;
+    }
+
+    case 'audio-player':
+      return `
+        <div class="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+          <audio src="${esc(p.url || '')}" controls class="flex-1 h-10"></audio>
+          ${p.description ? `<span class="text-sm text-gray-600 dark:text-gray-400 shrink-0">${esc(p.description)}</span>` : ''}
+        </div>`;
+
+    case 'list':
+      return `
+        <div class="flex ${p.direction === 'horizontal' ? 'flex-row flex-wrap' : 'flex-col'} gap-${p.gap || 2}
+          ${p.align === 'center' ? 'items-center' : p.align === 'end' ? 'items-end' : p.align === 'stretch' ? 'items-stretch' : 'items-start'}">
+          ${children}
+        </div>`;
+
+    case 'modal': {
+      const modalId = `modal_${Math.random().toString(36).slice(2, 8)}`;
+      const triggerChild = comp.children?.[0] ? renderComponent(comp.children[0]) : `<button class="px-4 py-2 bg-blue-600 text-white rounded-lg">${esc(p.triggerLabel || 'Open')}</button>`;
+      const contentChildren = (comp.children || []).slice(1).map(renderComponent).join('\n');
+      return `
+        <div x-data="{ open: false }">
+          <div @click="open = true" class="cursor-pointer inline-block">${triggerChild}</div>
+          <template x-teleport="body">
+            <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+              <div class="fixed inset-0 bg-black/50" @click="open = false"></div>
+              <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 z-10" @click.stop>
+                <button @click="open = false" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
+                ${p.title ? `<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">${esc(p.title)}</h3>` : ''}
+                ${contentChildren || '<p class="text-gray-500">Modal content</p>'}
+              </div>
+            </div>
+          </template>
+        </div>`;
+    }
+
+    case 'checkbox': {
+      const cbId = `cb_${Math.random().toString(36).slice(2, 8)}`;
+      return `
+        <label for="${cbId}" class="flex items-center gap-2 cursor-pointer select-none mb-2">
+          <input id="${cbId}" type="checkbox" ${p.value ? 'checked' : ''}
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700 dark:text-gray-300">${esc(p.label || '')}</span>
+        </label>`;
+    }
+
+    case 'choice-picker': {
+      const cpId = `cp_${Math.random().toString(36).slice(2, 8)}`;
+      const options: Array<{ label: string; value: string }> = p.options || [];
+      const selected: string[] = Array.isArray(p.value) ? p.value : [];
+      const isMulti = p.variant === 'multipleSelection';
+      const isChips = p.displayStyle === 'chips';
+
+      if (isChips) {
+        return `
+          <div class="mb-3">
+            ${p.label ? `<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">${esc(p.label)}</label>` : ''}
+            <div class="flex flex-wrap gap-2">
+              ${options.map(opt => {
+                const isSelected = selected.includes(opt.value);
+                return `<button class="px-3 py-1.5 rounded-full text-sm border transition-colors
+                  ${isSelected
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400'}">${esc(opt.label || opt.value)}</button>`;
+              }).join('\n')}
+            </div>
+          </div>`;
+      }
+
+      return `
+        <fieldset class="mb-3">
+          ${p.label ? `<legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">${esc(p.label)}</legend>` : ''}
+          <div class="space-y-1.5">
+            ${options.map((opt, i) => {
+              const inputType = isMulti ? 'checkbox' : 'radio';
+              const isSelected = selected.includes(opt.value);
+              return `<label class="flex items-center gap-2 cursor-pointer">
+                <input type="${inputType}" name="${cpId}" value="${esc(opt.value)}" ${isSelected ? 'checked' : ''}
+                  class="w-4 h-4 ${isMulti ? 'rounded' : ''} border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                <span class="text-sm text-gray-700 dark:text-gray-300">${esc(opt.label || opt.value)}</span>
+              </label>`;
+            }).join('\n')}
+          </div>
+        </fieldset>`;
+    }
+
+    case 'slider': {
+      const sliderId = `slider_${Math.random().toString(36).slice(2, 8)}`;
+      const min = p.min ?? 0;
+      const max = p.max ?? 100;
+      const val = p.value ?? Math.round((min + max) / 2);
+      return `
+        <div class="mb-3" x-data="{ val: ${val} }">
+          ${p.label ? `<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            ${esc(p.label)} <span class="text-blue-600 dark:text-blue-400 font-semibold" x-text="val"></span>
+          </label>` : ''}
+          <input id="${sliderId}" type="range" min="${min}" max="${max}" x-model="val"
+            class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600">
+          <div class="flex justify-between text-xs text-gray-400 mt-1">
+            <span>${min}</span><span>${max}</span>
+          </div>
+        </div>`;
+    }
+
+    case 'date-time-input': {
+      const dtId = `dt_${Math.random().toString(36).slice(2, 8)}`;
+      const enableDate = p.enableDate !== false;
+      const enableTime = p.enableTime === true;
+      let inputType = 'date';
+      if (enableDate && enableTime) inputType = 'datetime-local';
+      else if (!enableDate && enableTime) inputType = 'time';
+
+      return `
+        <div class="mb-3">
+          ${p.label ? `<label for="${dtId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">${esc(p.label)}</label>` : ''}
+          <input id="${dtId}" type="${inputType}" value="${esc(p.value || '')}"
+            ${p.min ? `min="${esc(p.min)}"` : ''} ${p.max ? `max="${esc(p.max)}"` : ''}
+            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>`;
+    }
+
     default:
       return `<!-- unknown component: ${t} -->`;
   }
@@ -253,6 +386,14 @@ function formatCell(value: any, col: ColumnDef): string {
     return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[badgeColor] || colors.info}">${esc(String(value))}</span>`;
   }
   return esc(String(value));
+}
+
+/** Map A2UI camelCase icon names to Material Icons snake_case */
+function iconName(name: string | { path: string }): string {
+  if (typeof name === 'object' && name.path) return name.path;
+  if (typeof name !== 'string') return 'help';
+  // Convert camelCase to snake_case for Material Icons
+  return name.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
 }
 
 function esc(str: string): string {
@@ -313,6 +454,7 @@ export function renderPage(spec: PageSpec): string {
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${esc(title)}">
   <meta name="twitter:description" content="${esc(description)}">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -351,6 +493,7 @@ export function renderRawPage(html: string, title: string = 'ClawBoard'): string
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(title)}</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' }</script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>

@@ -3,10 +3,10 @@
  * into self-contained interactive HTML pages.
  *
  * Component types supported:
- *   layout: container, row, column, card, tabs, accordion
+ *   layout: container, row, column, card, tabs, accordion, list, modal
  *   data:   stat, table, chart (line, bar, pie, doughnut, radar, area)
- *   input:  button, text-field, select
- *   media:  image, markdown, code, html, text, divider, spacer
+ *   input:  button, text-field, select, checkbox, choice-picker, slider, date-time-input
+ *   media:  icon, image, video, audio-player, markdown, code, html, text, divider, spacer
  *   nav:    header, link
  */
 import type { Component, PageSpec } from './types';
