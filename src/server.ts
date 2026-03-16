@@ -286,9 +286,12 @@ app.get('/p/:id', (req: Request, res: Response) => {
     "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com",
     "img-src 'self' data: https:",
     "media-src 'self' https:",
-    "font-src 'self' https:",
+    "font-src 'self' https: data:",
     "connect-src 'self'",
     "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
   ].join('; '));
 
   res.type('html').send(page.html);
