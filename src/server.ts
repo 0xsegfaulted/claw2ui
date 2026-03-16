@@ -152,9 +152,21 @@ setInterval(() => {
 // === App Setup ===
 const app = express();
 
-// When behind a cloud reverse proxy (0.0.0.0), trust only the first proxy hop.
-// When local-only, trust loopback proxies (nginx/caddy on localhost).
-app.set('trust proxy', BIND === '0.0.0.0' ? 1 : 'loopback');
+// CLAWBOARD_TRUST_PROXY: explicit control over Express trust proxy setting.
+// - Not set: 'loopback' (trust local reverse proxies, safe default)
+// - 'true' / '1': trust first proxy hop
+// - 'false' / '0': disable proxy trust entirely
+// - Number (e.g. '2'): trust that many proxy hops
+// - 'loopback': trust loopback addresses
+// - IP address(es): trust specific proxy IPs
+function parseTrustProxy(val: string | undefined): string | number | boolean {
+  if (!val) return 'loopback';
+  if (val === 'true') return 1;
+  if (val === 'false') return false;
+  if (Number.isFinite(+val)) return +val;
+  return val; // 'loopback', IP addresses, etc.
+}
+app.set('trust proxy', parseTrustProxy(process.env.CLAWBOARD_TRUST_PROXY));
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));

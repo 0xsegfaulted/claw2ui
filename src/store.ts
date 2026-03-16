@@ -69,6 +69,7 @@ export function getPage(id: string, incrementViews: boolean = true): PageData | 
     const age = Date.now() - pageData.meta.createdAt;
     if (age > pageData.meta.ttl) {
       fs.unlinkSync(filePath);
+      scheduleBackup();
       return null;
     }
   }
@@ -87,6 +88,7 @@ export function getPage(id: string, incrementViews: boolean = true): PageData | 
 export function listPages(): Array<{ id: string } & PageMeta> {
   const files = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.json'));
   const pages: Array<{ id: string } & PageMeta> = [];
+  let expired = false;
 
   for (const file of files) {
     try {
@@ -94,6 +96,7 @@ export function listPages(): Array<{ id: string } & PageMeta> {
       // Check TTL
       if (data.meta.ttl > 0 && Date.now() - data.meta.createdAt > data.meta.ttl) {
         fs.unlinkSync(path.join(PAGES_DIR, file));
+        expired = true;
         continue;
       }
       pages.push({ id: data.id, ...data.meta });
@@ -102,6 +105,7 @@ export function listPages(): Array<{ id: string } & PageMeta> {
     }
   }
 
+  if (expired) scheduleBackup();
   return pages.sort((a, b) => b.createdAt - a.createdAt);
 }
 
