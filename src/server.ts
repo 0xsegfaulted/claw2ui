@@ -41,15 +41,20 @@ function getOrCreateToken(): string {
 const API_TOKEN = getOrCreateToken();
 
 /**
- * Auth middleware - checks Bearer token or localhost origin
+ * Auth middleware - checks Bearer token.
+ * Read-only GET requests from localhost are allowed without token (browser dashboard).
+ * Mutating operations (POST, DELETE) always require a Bearer token to prevent CSRF.
  */
 function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  const ip = req.ip || '';
-  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
-  if (isLocal) { next(); return; }
-
   const auth = req.headers.authorization;
   if (auth && auth.startsWith('Bearer ') && auth.slice(7) === API_TOKEN) {
+    next(); return;
+  }
+
+  // Allow read-only GET requests from localhost (e.g. browser dashboard)
+  const ip = req.ip || '';
+  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  if (isLocal && req.method === 'GET') {
     next(); return;
   }
 
@@ -163,7 +168,17 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    const result = savePage(finalHtml, { title: pageTitle, ttl, spec });
+    let result;
+    try {
+      result = savePage(finalHtml, { title: pageTitle, ttl, spec });
+    } catch (saveErr: any) {
+      if (saveErr.message?.includes('Page limit reached')) {
+        res.status(507).json({ error: saveErr.message });
+        return;
+      }
+      throw saveErr;
+    }
+
     const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
     const pageUrl = `${baseUrl}/p/${result.id}`;
 
@@ -271,9 +286,12 @@ app.get('/p/:id', (req: Request, res: Response) => {
     "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com",
     "img-src 'self' data: https:",
     "media-src 'self' https:",
-    "font-src 'self' https:",
+    "font-src 'self' https: data:",
     "connect-src 'self'",
     "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
   ].join('; '));
 
   res.type('html').send(page.html);

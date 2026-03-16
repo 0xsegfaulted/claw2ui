@@ -44,12 +44,12 @@ export function renderComponent(comp: Component): string {
     case 'tabs': {
       const tabs: Array<{ id: string; label: string; children?: Component[] }> = p.tabs || [];
       return `
-        <div x-data="{ activeTab: '${tabs[0]?.id || ''}' }">
+        <div x-data="{ activeTab: '${escJs(tabs[0]?.id || '')}' }">
           <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
             <nav class="flex space-x-4">
               ${tabs.map(tab => `
-                <button @click="activeTab = '${tab.id}'"
-                  :class="activeTab === '${tab.id}' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                <button @click="activeTab = '${escJs(tab.id)}'"
+                  :class="activeTab === '${escJs(tab.id)}' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
                   class="px-3 py-2 border-b-2 font-medium text-sm transition-colors">
                   ${esc(tab.label)}
                 </button>
@@ -57,7 +57,7 @@ export function renderComponent(comp: Component): string {
             </nav>
           </div>
           ${tabs.map(tab => `
-            <div x-show="activeTab === '${tab.id}'" x-transition>
+            <div x-show="activeTab === '${escJs(tab.id)}'" x-transition>
               ${(tab.children || []).map(renderComponent).join('\n')}
             </div>
           `).join('')}
@@ -96,7 +96,7 @@ export function renderComponent(comp: Component): string {
                 ${Number(p.change) >= 0 ? '\u2191' : '\u2193'} ${esc(String(Math.abs(Number(p.change))))}%
               </p>` : ''}
             </div>
-            ${p.icon ? `<div class="text-3xl">${p.icon}</div>` : ''}
+            ${p.icon ? `<div class="text-3xl">${esc(String(p.icon))}</div>` : ''}
           </div>
         </div>`;
 
@@ -116,9 +116,9 @@ export function renderComponent(comp: Component): string {
                 <tr>
                   ${columns.map(col => `
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none"
-                        @click="sort === '${col.key}' ? asc = !asc : (sort = '${col.key}', asc = true)">
+                        @click="sort === '${escJs(col.key)}' ? asc = !asc : (sort = '${escJs(col.key)}', asc = true)">
                       ${esc(col.label || col.key)}
-                      <span x-show="sort === '${col.key}'" x-text="asc ? ' \u2191' : ' \u2193'"></span>
+                      <span x-show="sort === '${escJs(col.key)}'" x-text="asc ? ' \u2191' : ' \u2193'"></span>
                     </th>
                   `).join('')}
                 </tr>
@@ -139,9 +139,9 @@ export function renderComponent(comp: Component): string {
 
     case 'chart': {
       const chartId = `chart_${Math.random().toString(36).slice(2, 8)}`;
-      const chartType = p.chartType || 'line';
-      const chartData = JSON.stringify(p.data || {});
-      const chartOptions = JSON.stringify({
+      const chartType = VALID_CHART_TYPES.includes(p.chartType) ? p.chartType : 'line';
+      const chartData = escJsonInScript(JSON.stringify(p.data || {}));
+      const chartOptions = escJsonInScript(JSON.stringify({
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -149,9 +149,10 @@ export function renderComponent(comp: Component): string {
           title: { display: !!p.title, text: p.title || '' },
         },
         ...(p.options || {}),
-      });
+      }));
+      const height = parseInt(String(p.height), 10) || 300;
       return `
-        <div style="height: ${p.height || 300}px; position: relative;">
+        <div style="height: ${height}px; position: relative;">
           <canvas id="${chartId}"></canvas>
         </div>
         <script>
@@ -167,16 +168,18 @@ export function renderComponent(comp: Component): string {
     }
 
     // === Input ===
-    case 'button':
+    case 'button': {
+      const variants: Record<string, string> = {
+        secondary: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600',
+        danger: 'bg-red-600 text-white hover:bg-red-700',
+        outline: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
+      };
+      const variantClass = variants[p.variant] || 'bg-blue-600 text-white hover:bg-blue-700';
       return `
-        <button class="px-4 py-2 rounded-lg font-medium text-sm transition-colors
-          ${p.variant === 'secondary' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600' :
-            p.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700' :
-            p.variant === 'outline' ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' :
-            'bg-blue-600 text-white hover:bg-blue-700'}"
-          ${p.onClick ? `onclick="${esc(p.onClick)}"` : ''}>
+        <button class="px-4 py-2 rounded-lg font-medium text-sm transition-colors ${variantClass}">
           ${esc(p.label || 'Button')}
         </button>`;
+    }
 
     case 'text-field':
       return `
@@ -202,7 +205,7 @@ export function renderComponent(comp: Component): string {
     }
 
     case 'markdown':
-      return `<div class="prose dark:prose-invert max-w-none">${p.content || ''}</div>`;
+      return `<div class="prose dark:prose-invert max-w-none">${sanitizeHtml(p.content || '')}</div>`;
 
     case 'code':
       return `
@@ -423,17 +426,52 @@ function esc(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+/** Escape a string for use inside JS single-quoted strings embedded in HTML attributes */
+function escJs(str: string): string {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\x22')
+    .replace(/</g, '\\x3c')
+    .replace(/>/g, '\\x3e')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+}
+
+/** Escape JSON output for safe embedding inside <script> tags */
+function escJsonInScript(json: string): string {
+  return json.replace(/<\//g, '<\\/');
+}
+
+const VALID_CHART_TYPES = ['line', 'bar', 'pie', 'doughnut', 'radar', 'polarArea', 'bubble', 'scatter'];
+
+
 /**
  * Sanitize HTML: strip <script> tags, javascript: URLs, and on* event handlers.
  */
 function sanitizeHtml(html: string): string {
   if (typeof html !== 'string') return '';
   return html
+    // Strip dangerous tags (script, iframe, object, embed, form, style, base, meta, link)
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<script\b[^>]*>/gi, '')
+    .replace(/<\/?script\b[^>]*>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<\/?iframe\b[^>]*>/gi, '')
+    .replace(/<\/?object\b[^>]*>/gi, '')
+    .replace(/<\/?embed\b[^>]*>/gi, '')
+    .replace(/<\/?form\b[^>]*>/gi, '')
+    .replace(/<\/?base\b[^>]*>/gi, '')
+    .replace(/<\/?meta\b[^>]*>/gi, '')
+    .replace(/<link\b[^>]*>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<\/?style\b[^>]*>/gi, '')
+    // Strip event handlers
     .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    .replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, 'href="#"')
-    .replace(/src\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, 'src=""');
+    // Strip javascript: URLs (quoted and unquoted)
+    .replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]*)/gi, 'href="#"')
+    .replace(/src\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]*)/gi, 'src=""')
+    .replace(/srcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
 }
 
 /**
