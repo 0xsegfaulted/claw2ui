@@ -1,4 +1,9 @@
 {
+  "tunnel": {
+    "name": "your-tunnel-name",
+    "url": "https://board.yourdomain.com"
+  },
+  "tokens": [],
   "platforms": {
     "telegram": {
       "botToken": "YOUR_BOT_TOKEN",

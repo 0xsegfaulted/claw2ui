@@ -22,6 +22,7 @@ import { savePage, getPage, listPages, deletePage } from './store';
 import { renderPage, renderRawPage } from './renderer';
 import { startTunnel, getPublicUrl, stopTunnel } from './tunnel';
 import { formatForAll, listPlatforms } from './platforms';
+import { saveToken as storeToken, getToken, listTokens as listAllTokens, revokeToken, findTokenById, checkDailyLimit, recordUsage, countRecentTokensByIp } from './token-store';
 import type { PageSpec } from './types';
 
 const PORT = parseInt(process.env.CLAWBOARD_PORT || '9800', 10);
@@ -41,24 +42,74 @@ function getOrCreateToken(): string {
 const API_TOKEN = getOrCreateToken();
 
 /**
+ * Load tokens from claw2ui.config.json (admin-managed config tokens)
+ */
+function loadConfigTokens(): string[] {
+  const configPath = path.join(process.cwd(), 'claw2ui.config.json');
+  try {
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      return Array.isArray(config.tokens) ? config.tokens : [];
+    }
+  } catch {}
+  return [];
+}
+
+/**
  * Auth middleware - checks Bearer token.
- * Read-only GET requests from localhost are allowed without token (browser dashboard).
+ * Accepts: admin token, config tokens, or registered (non-disabled) tokens.
  * Mutating operations (POST, DELETE) always require a Bearer token to prevent CSRF.
  */
 function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) {
+    const token = auth.slice(7);
+    // Check admin token
+    if (token === API_TOKEN) { next(); return; }
+    // Check config tokens
+    if (loadConfigTokens().includes(token)) { next(); return; }
+    // Check registered tokens
+    const record = getToken(token);
+    if (record && !record.disabled) { next(); return; }
+  }
+
+  res.status(401).json({ error: 'Unauthorized. Provide Authorization: Bearer <token>' });
+}
+
+/**
+ * Privileged auth middleware - allows admin token, config tokens, or localhost.
+ * Does NOT accept registered (self-service) tokens.
+ */
+function requirePrivilegedAuth(req: Request, res: Response, next: NextFunction): void {
+  const ip = req.ip || '';
+  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  if (isLocal) { next(); return; }
+
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) {
+    const token = auth.slice(7);
+    if (token === API_TOKEN || loadConfigTokens().includes(token)) {
+      next(); return;
+    }
+  }
+
+  res.status(403).json({ error: 'Insufficient permissions. Admin access required for this endpoint.' });
+}
+
+/**
+ * Admin auth middleware - only allows admin token or localhost.
+ */
+function requireAdminAuth(req: Request, res: Response, next: NextFunction): void {
+  const ip = req.ip || '';
+  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  if (isLocal) { next(); return; }
+
   const auth = req.headers.authorization;
   if (auth && auth.startsWith('Bearer ') && auth.slice(7) === API_TOKEN) {
     next(); return;
   }
 
-  // Allow read-only GET requests from localhost (e.g. browser dashboard)
-  const ip = req.ip || '';
-  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
-  if (isLocal && req.method === 'GET') {
-    next(); return;
-  }
-
-  res.status(401).json({ error: 'Unauthorized. Provide Authorization: Bearer <token>' });
+  res.status(403).json({ error: 'Admin access required.' });
 }
 
 // === Rate Limiting ===
@@ -140,6 +191,88 @@ function escHtml(s: string): string {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// === Registration Rate Limiting ===
+const regRateLimitMap = new Map<string, { start: number; count: number }>();
+const REG_RATE_WINDOW = 60_000; // 1 minute
+const REG_RATE_MAX = 5;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of regRateLimitMap) {
+    if (now - entry.start > REG_RATE_WINDOW) regRateLimitMap.delete(ip);
+  }
+}, REG_RATE_WINDOW);
+
+// === Self-Service Registration (NO auth required) ===
+
+app.post('/api/register', (req: Request, res: Response) => {
+  const ip = req.ip || '';
+
+  // Per-minute rate limit
+  const now = Date.now();
+  const regEntry = regRateLimitMap.get(ip);
+  if (regEntry && now - regEntry.start < REG_RATE_WINDOW) {
+    regEntry.count++;
+    if (regEntry.count > REG_RATE_MAX) {
+      res.status(429).json({ error: 'Too many registration attempts. Try again later.' });
+      return;
+    }
+  } else {
+    regRateLimitMap.set(ip, { start: now, count: 1 });
+  }
+
+  // Max tokens per IP per 24h
+  const recentCount = countRecentTokensByIp(ip, 24 * 60 * 60 * 1000);
+  if (recentCount >= 3) {
+    res.status(429).json({ error: 'Maximum registrations per day reached. Try again tomorrow.' });
+    return;
+  }
+
+  // Max total active tokens (disabled/revoked tokens don't count)
+  const activeCount = listAllTokens().filter(t => !t.disabled).length;
+  if (activeCount >= 500) {
+    res.status(503).json({ error: 'Registration is currently closed. Please try again later.' });
+    return;
+  }
+
+  // Generate and save token
+  const token = crypto.randomBytes(24).toString('hex');
+  storeToken(token, ip);
+
+  res.json({ token, message: 'Registration successful. Use this token to publish pages.' });
+});
+
+// === Admin Token Management (admin only) ===
+
+app.get('/api/tokens', requireAdminAuth, (_req: Request, res: Response) => {
+  const tokens = listAllTokens();
+  res.json(tokens.map(t => ({
+    id: t.id || t.token.slice(0, 12),
+    token: t.token.slice(0, 8) + '...' + t.token.slice(-4),
+    createdAt: t.createdAt,
+    ip: t.ip,
+    lastUsed: t.lastUsed,
+    pagesCreated: t.pagesCreated,
+    dailyPages: t.dailyPages,
+    disabled: t.disabled,
+  })));
+});
+
+app.post('/api/tokens/:token/revoke', requireAdminAuth, (req: Request, res: Response) => {
+  const identifier = paramStr(req.params.token);
+  // Try as full token first
+  let ok = revokeToken(identifier);
+  if (!ok) {
+    // Try as short id
+    const record = findTokenById(identifier);
+    if (record) {
+      ok = revokeToken(record.token);
+    }
+  }
+  if (!ok) { res.status(404).json({ error: 'Token not found' }); return; }
+  res.json({ revoked: true });
+});
+
 // === API Routes ===
 
 app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
@@ -168,6 +301,21 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
+    // Per-token daily page limit for registered tokens (50 pages/day)
+    // Check before save so we can reject; increment after save so failures don't consume quota
+    const authHeader = req.headers.authorization;
+    let registeredToken: string | null = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const tkn = authHeader.slice(7);
+      if (tkn !== API_TOKEN && !loadConfigTokens().includes(tkn)) {
+        if (!checkDailyLimit(tkn, 50)) {
+          res.status(429).json({ error: 'Daily page limit reached (50 pages/day). Try again tomorrow.' });
+          return;
+        }
+        registeredToken = tkn;
+      }
+    }
+
     let result;
     try {
       result = savePage(finalHtml, { title: pageTitle, ttl, spec });
@@ -177,6 +325,11 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
         return;
       }
       throw saveErr;
+    }
+
+    // Record usage only after successful save
+    if (registeredToken) {
+      recordUsage(registeredToken);
     }
 
     const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
@@ -205,13 +358,13 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/pages', requireAuth, (_req: Request, res: Response) => {
+app.get('/api/pages', requirePrivilegedAuth, (_req: Request, res: Response) => {
   const pages = listPages();
   const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
   res.json(pages.map(p => ({ ...p, url: `${baseUrl}/p/${p.id}` })));
 });
 
-app.get('/api/pages/:id', requireAuth, (req: Request, res: Response) => {
+app.get('/api/pages/:id', requirePrivilegedAuth, (req: Request, res: Response) => {
   if (!isValidPageId(paramStr(req.params.id))) { res.status(400).json({ error: 'Invalid page ID' }); return; }
   const page = getPage(paramStr(req.params.id));
   if (!page) { res.status(404).json({ error: 'Page not found' }); return; }
@@ -225,7 +378,7 @@ app.get('/api/pages/:id', requireAuth, (req: Request, res: Response) => {
   });
 });
 
-app.delete('/api/pages/:id', requireAuth, (req: Request, res: Response) => {
+app.delete('/api/pages/:id', requirePrivilegedAuth, (req: Request, res: Response) => {
   if (!isValidPageId(paramStr(req.params.id))) { res.status(400).json({ error: 'Invalid page ID' }); return; }
   const ok = deletePage(paramStr(req.params.id));
   if (!ok) { res.status(404).json({ error: 'Page not found' }); return; }
@@ -233,7 +386,7 @@ app.delete('/api/pages/:id', requireAuth, (req: Request, res: Response) => {
 });
 
 // Deprecated: deliver endpoint returns formats instead
-app.post('/api/pages/:id/deliver', requireAuth, (req: Request, res: Response) => {
+app.post('/api/pages/:id/deliver', requirePrivilegedAuth, (req: Request, res: Response) => {
   if (!isValidPageId(paramStr(req.params.id))) { res.status(400).json({ error: 'Invalid page ID' }); return; }
   const page = getPage(paramStr(req.params.id), false);
   if (!page) { res.status(404).json({ error: 'Page not found' }); return; }
@@ -247,7 +400,7 @@ app.post('/api/pages/:id/deliver', requireAuth, (req: Request, res: Response) =>
   });
 });
 
-app.get('/api/platforms', requireAuth, (_req: Request, res: Response) => {
+app.get('/api/platforms', requirePrivilegedAuth, (_req: Request, res: Response) => {
   res.json(listPlatforms());
 });
 
@@ -297,7 +450,7 @@ app.get('/p/:id', (req: Request, res: Response) => {
   res.type('html').send(page.html);
 });
 
-app.get('/', requireAuth, (_req: Request, res: Response) => {
+app.get('/', requirePrivilegedAuth, (_req: Request, res: Response) => {
   const pages = listPages();
   const baseUrl = getPublicUrl() || `http://localhost:${PORT}`;
 
