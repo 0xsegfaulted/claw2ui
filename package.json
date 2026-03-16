@@ -1,16 +1,23 @@
 {
   "name": "clawboard",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Agent-to-UI bridge: serve interactive pages from IM agents via tunnel",
-  "main": "src/server.js",
+  "main": "dist/server.js",
   "bin": {
     "clawboard": "./bin/clawboard.js"
   },
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc --watch"
   },
-  "keywords": ["agent", "ui", "tunnel", "im", "dashboard"],
+  "keywords": [
+    "agent",
+    "ui",
+    "tunnel",
+    "im",
+    "dashboard"
+  ],
   "author": "",
   "license": "MIT",
   "type": "commonjs",
@@ -18,5 +25,10 @@
     "express": "^5.2.1",
     "nanoid": "^3.3.11",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3"
   }
 }

@@ -24,7 +24,7 @@ curl -s http://localhost:9800/api/status
 # If not running, start:
 bash start.sh
 # OR
-node src/server.js &
+npm start
 ```
 
 ## How to Publish Pages
@@ -106,6 +106,63 @@ Raw HTML fragments are automatically wrapped with Tailwind CSS, Alpine.js, and C
 - `header` - Props: `title`, `subtitle`
 - `link` - Props: `href`, `label`
 
+## Platform Delivery (Rich IM Messages)
+
+Instead of just sending a URL, ClawBoard can deliver rich formatted messages directly to IM platforms.
+
+### Telegram Delivery (Auto)
+
+Add `"deliver": { "platform": "telegram" }` to the create request to auto-send a formatted summary to Telegram with an "Open Dashboard" inline button:
+
+```bash
+curl -s -X POST http://localhost:9800/api/pages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My Dashboard",
+    "components": [...],
+    "deliver": { "platform": "telegram" }
+  }'
+```
+
+The Telegram message includes:
+- Formatted title and subtitle
+- Key metrics from `stat` components
+- First rows from `table` components
+- Inline keyboard button to open the full interactive page
+
+### Deliver an Existing Page
+
+```bash
+curl -s -X POST http://localhost:9800/api/pages/<id>/deliver \
+  -H "Content-Type: application/json" \
+  -d '{ "platform": "telegram" }'
+```
+
+### Configuration
+
+Config is auto-detected from cc-connect (`~/.cc-connect/config.toml`) and `CC_SESSION_KEY` env var.
+Override via `clawboard.config.json`:
+```json
+{
+  "platforms": {
+    "telegram": {
+      "botToken": "auto",
+      "chatId": "YOUR_CHAT_ID",
+      "proxy": "auto"
+    }
+  }
+}
+```
+
+Or env vars: `CLAWBOARD_TG_BOT_TOKEN`, `CLAWBOARD_TG_CHAT_ID`, `CLAWBOARD_TG_PROXY`
+
+### Adding New Platforms
+
+To add Feishu, Discord, etc.:
+1. Create `src/platforms/<name>.js` with `formatMessage()` and `deliver()`
+2. Register in `src/platforms/index.js`
+3. Add config in `src/config.js`
+
 ## When to Use ClawBoard
 
 Use ClawBoard when the user asks for:
@@ -115,7 +172,9 @@ Use ClawBoard when the user asks for:
 - Reports with visual layout
 - Any content where a web page is better than plain text
 
-After publishing, include the URL in your response to the user.
+**For Telegram users**: Always use `deliver: { platform: "telegram" }` to send rich messages inline. The user sees a formatted summary immediately, with a button to open the full interactive dashboard.
+
+**For other platforms**: Include the URL in your response text.
 
 ## Example: Full Dashboard
 

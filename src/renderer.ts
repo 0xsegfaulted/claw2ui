@@ -5,15 +5,16 @@
  * Component types supported:
  *   layout: container, row, column, card, tabs, accordion
  *   data:   stat, table, chart (line, bar, pie, doughnut, radar, area)
- *   input:  button, text-field, select, checkbox, slider
- *   media:  image, markdown, code, html
- *   nav:    header, breadcrumb, link
+ *   input:  button, text-field, select
+ *   media:  image, markdown, code, html, text, divider, spacer
+ *   nav:    header, link
  */
+import type { Component, PageSpec, ColumnDef } from './types';
 
 /**
  * Render a component tree to HTML string
  */
-function renderComponent(comp) {
+export function renderComponent(comp: Component): string {
   if (!comp || !comp.type) return '';
   const t = comp.type;
   const p = comp.props || {};
@@ -41,8 +42,7 @@ function renderComponent(comp) {
         </div>`;
 
     case 'tabs': {
-      const tabs = p.tabs || [];
-      const tabId = `tabs_${Math.random().toString(36).slice(2, 8)}`;
+      const tabs: Array<{ id: string; label: string; children?: Component[] }> = p.tabs || [];
       return `
         <div x-data="{ activeTab: '${tabs[0]?.id || ''}' }">
           <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
@@ -65,7 +65,7 @@ function renderComponent(comp) {
     }
 
     case 'accordion': {
-      const items = p.items || [];
+      const items: Array<{ title: string; children?: Component[] }> = p.items || [];
       return `
         <div class="space-y-2">
           ${items.map((item, i) => `
@@ -93,7 +93,7 @@ function renderComponent(comp) {
               <p class="text-sm font-medium text-gray-500 dark:text-gray-400">${esc(p.label || '')}</p>
               <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">${esc(String(p.value || ''))}</p>
               ${p.change ? `<p class="text-sm mt-1 ${Number(p.change) >= 0 ? 'text-green-600' : 'text-red-600'}">
-                ${Number(p.change) >= 0 ? '↑' : '↓'} ${esc(String(Math.abs(Number(p.change))))}%
+                ${Number(p.change) >= 0 ? '\u2191' : '\u2193'} ${esc(String(Math.abs(Number(p.change))))}%
               </p>` : ''}
             </div>
             ${p.icon ? `<div class="text-3xl">${p.icon}</div>` : ''}
@@ -101,9 +101,8 @@ function renderComponent(comp) {
         </div>`;
 
     case 'table': {
-      const columns = p.columns || [];
-      const rows = p.rows || [];
-      const tableId = `tbl_${Math.random().toString(36).slice(2, 8)}`;
+      const columns: ColumnDef[] = p.columns || [];
+      const rows: Record<string, any>[] = p.rows || [];
       return `
         <div x-data="{ search: '', sort: '', asc: true, page: 0, perPage: ${p.perPage || 10} }" class="overflow-hidden">
           ${p.searchable !== false ? `
@@ -119,7 +118,7 @@ function renderComponent(comp) {
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none"
                         @click="sort === '${col.key}' ? asc = !asc : (sort = '${col.key}', asc = true)">
                       ${esc(col.label || col.key)}
-                      <span x-show="sort === '${col.key}'" x-text="asc ? ' ↑' : ' ↓'"></span>
+                      <span x-show="sort === '${col.key}'" x-text="asc ? ' \u2191' : ' \u2193'"></span>
                     </th>
                   `).join('')}
                 </tr>
@@ -192,7 +191,7 @@ function renderComponent(comp) {
         <div class="mb-3">
           ${p.label ? `<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">${esc(p.label)}</label>` : ''}
           <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            ${(p.options || []).map(opt => `<option value="${esc(opt.value || opt)}">${esc(opt.label || opt)}</option>`).join('')}
+            ${(p.options || []).map((opt: any) => `<option value="${esc(opt.value || opt)}">${esc(opt.label || opt)}</option>`).join('')}
           </select>
         </div>`;
 
@@ -210,7 +209,6 @@ function renderComponent(comp) {
         <pre class="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm"><code class="language-${p.language || 'text'}">${esc(p.content || '')}</code></pre>`;
 
     case 'html':
-      // Sanitize: strip <script> tags and event handlers to prevent XSS
       return sanitizeHtml(p.content || '');
 
     case 'text':
@@ -240,12 +238,12 @@ function renderComponent(comp) {
   }
 }
 
-function formatCell(value, col) {
+function formatCell(value: any, col: ColumnDef): string {
   if (value === null || value === undefined) return '-';
   if (col.format === 'currency') return `$${Number(value).toLocaleString()}`;
   if (col.format === 'percent') return `${value}%`;
   if (col.format === 'badge') {
-    const colors = {
+    const colors: Record<string, string> = {
       success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
       warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
       error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
@@ -257,7 +255,7 @@ function formatCell(value, col) {
   return esc(String(value));
 }
 
-function esc(str) {
+function esc(str: string): string {
   if (typeof str !== 'string') return '';
   return str
     .replace(/&/g, '&amp;')
@@ -269,31 +267,25 @@ function esc(str) {
 
 /**
  * Sanitize HTML: strip <script> tags, javascript: URLs, and on* event handlers.
- * Allows safe HTML structure (divs, spans, classes, etc.) but blocks XSS vectors.
  */
-function sanitizeHtml(html) {
+function sanitizeHtml(html: string): string {
   if (typeof html !== 'string') return '';
   return html
-    // Remove <script>...</script> tags (including multiline)
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    // Remove <script ...> opening tags that might not be closed
     .replace(/<script\b[^>]*>/gi, '')
-    // Remove on* event handlers (onclick, onerror, onload, etc.)
     .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    // Remove javascript: URLs
     .replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, 'href="#"')
     .replace(/src\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, 'src=""');
 }
 
 /**
  * Render a full page from a component tree
- * @param {object} spec - { title, theme, components: [...] }
- * @returns {string} Full HTML document
  */
-function renderPage(spec) {
+export function renderPage(spec: PageSpec): string {
   const title = spec.title || 'ClawBoard';
-  const theme = spec.theme || 'auto'; // 'light', 'dark', 'auto'
+  const theme = spec.theme || 'auto';
   const components = spec.components || [];
+  const description = generateDescription(components);
 
   const componentHtml = components.map(renderComponent).join('\n');
 
@@ -314,6 +306,13 @@ function renderPage(spec) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(title)}</title>
+  <meta name="description" content="${esc(description)}">
+  <meta property="og:title" content="${esc(title)}">
+  <meta property="og:description" content="${esc(description)}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${esc(title)}">
+  <meta name="twitter:description" content="${esc(description)}">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -327,7 +326,6 @@ function renderPage(spec) {
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     [x-cloak] { display: none !important; }
-    /* Custom scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -346,7 +344,7 @@ function renderPage(spec) {
 /**
  * Render raw HTML into a full page with just the base styling
  */
-function renderRawPage(html, title = 'ClawBoard') {
+export function renderRawPage(html: string, title: string = 'ClawBoard'): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -375,4 +373,35 @@ function renderRawPage(html, title = 'ClawBoard') {
 </html>`;
 }
 
-module.exports = { renderPage, renderRawPage, renderComponent };
+function generateDescription(components: Component[]): string {
+  if (!Array.isArray(components)) return 'Interactive page powered by ClawBoard';
+  const flat = flattenForDesc(components);
+  const stats = flat.filter(c => c.type === 'stat').length;
+  const charts = flat.filter(c => c.type === 'chart').length;
+  const tables = flat.filter(c => c.type === 'table').length;
+  const parts: string[] = [];
+  if (stats) parts.push(`${stats} metric${stats > 1 ? 's' : ''}`);
+  if (charts) parts.push(`${charts} chart${charts > 1 ? 's' : ''}`);
+  if (tables) parts.push(`${tables} table${tables > 1 ? 's' : ''}`);
+  if (parts.length === 0) return 'Interactive page powered by ClawBoard';
+  return `Dashboard with ${parts.join(', ')} - powered by ClawBoard`;
+}
+
+function flattenForDesc(components: Component[]): Component[] {
+  const result: Component[] = [];
+  for (const comp of components) {
+    result.push(comp);
+    if (comp.children) result.push(...flattenForDesc(comp.children));
+    if (comp.props?.tabs) {
+      for (const tab of comp.props.tabs) {
+        if (tab.children) result.push(...flattenForDesc(tab.children));
+      }
+    }
+    if (comp.props?.items) {
+      for (const item of comp.props.items) {
+        if (item.children) result.push(...flattenForDesc(item.children));
+      }
+    }
+  }
+  return result;
+}

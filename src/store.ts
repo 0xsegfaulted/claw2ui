@@ -1,9 +1,10 @@
 /**
  * Page storage - file-based store for generated pages
  */
-const fs = require('fs');
-const path = require('path');
-const { nanoid } = require('nanoid');
+import fs from 'fs';
+import path from 'path';
+import { nanoid } from 'nanoid';
+import type { PageData, PageMeta, SavePageOptions, SavePageResult } from './types';
 
 const PAGES_DIR = path.join(__dirname, '..', 'pages');
 
@@ -14,25 +15,25 @@ if (!fs.existsSync(PAGES_DIR)) {
 
 /**
  * Save a page and return its ID
- * @param {string} html - The full HTML content
- * @param {object} meta - Metadata (title, type, ttl, etc.)
- * @returns {{ id: string, meta: object }}
  */
-function savePage(html, meta = {}) {
+export function savePage(html: string, meta: SavePageOptions = {}): SavePageResult {
   const id = nanoid(10);
   const now = Date.now();
-  const pageData = {
+  const pageData: PageData = {
     id,
     html,
+    spec: meta.spec || null,
     meta: {
       title: meta.title || 'Untitled',
       type: meta.type || 'page',
       createdAt: now,
-      ttl: meta.ttl || 0, // 0 = no expiry, otherwise ms
+      ttl: meta.ttl || 0,
       views: 0,
       ...meta,
     },
   };
+  // Don't duplicate spec inside meta
+  delete pageData.meta.spec;
 
   const filePath = path.join(PAGES_DIR, `${id}.json`);
   fs.writeFileSync(filePath, JSON.stringify(pageData, null, 2));
@@ -41,14 +42,13 @@ function savePage(html, meta = {}) {
 
 /**
  * Get a page by ID
- * @param {string} id
- * @returns {object|null}
+ * @param incrementViews - Whether to increment the view counter (default: true)
  */
-function getPage(id) {
+export function getPage(id: string, incrementViews: boolean = true): PageData | null {
   const filePath = path.join(PAGES_DIR, `${id}.json`);
   if (!fs.existsSync(filePath)) return null;
 
-  const pageData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  const pageData: PageData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
   // Check TTL
   if (pageData.meta.ttl > 0) {
@@ -59,31 +59,31 @@ function getPage(id) {
     }
   }
 
-  // Increment views
-  pageData.meta.views++;
-  fs.writeFileSync(filePath, JSON.stringify(pageData, null, 2));
+  if (incrementViews) {
+    pageData.meta.views++;
+    fs.writeFileSync(filePath, JSON.stringify(pageData, null, 2));
+  }
 
   return pageData;
 }
 
 /**
  * List all pages
- * @returns {object[]}
  */
-function listPages() {
+export function listPages(): Array<{ id: string } & PageMeta> {
   const files = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.json'));
-  const pages = [];
+  const pages: Array<{ id: string } & PageMeta> = [];
 
   for (const file of files) {
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(PAGES_DIR, file), 'utf-8'));
+      const data: PageData = JSON.parse(fs.readFileSync(path.join(PAGES_DIR, file), 'utf-8'));
       // Check TTL
       if (data.meta.ttl > 0 && Date.now() - data.meta.createdAt > data.meta.ttl) {
         fs.unlinkSync(path.join(PAGES_DIR, file));
         continue;
       }
       pages.push({ id: data.id, ...data.meta });
-    } catch (e) {
+    } catch {
       // Skip corrupted files
     }
   }
@@ -93,10 +93,8 @@ function listPages() {
 
 /**
  * Delete a page
- * @param {string} id
- * @returns {boolean}
  */
-function deletePage(id) {
+export function deletePage(id: string): boolean {
   const filePath = path.join(PAGES_DIR, `${id}.json`);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
@@ -104,5 +102,3 @@ function deletePage(id) {
   }
   return false;
 }
-
-module.exports = { savePage, getPage, listPages, deletePage };

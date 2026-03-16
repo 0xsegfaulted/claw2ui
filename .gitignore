@@ -5,3 +5,4 @@ pages/
 .server.pid
 _research/
 .cc-connect/
+clawboard.config.json

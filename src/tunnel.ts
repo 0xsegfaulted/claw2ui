@@ -2,16 +2,15 @@
  * Tunnel manager - exposes local server to the internet
  * Priority: cloudflared > localtunnel > manual SSH hint
  */
-const { spawn } = require('child_process');
-const http = require('http');
+import { spawn, ChildProcess } from 'child_process';
 
-let tunnelProcess = null;
-let publicUrl = null;
+let tunnelProcess: ChildProcess | null = null;
+let publicUrl: string | null = null;
 
 /**
  * Try to start a cloudflared quick tunnel (no account needed)
  */
-function startCloudflared(port) {
+function startCloudflared(port: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`], {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -24,9 +23,8 @@ function startCloudflared(port) {
       }
     }, 30000);
 
-    const handleData = (data) => {
+    const handleData = (data: Buffer): void => {
       output += data.toString();
-      // cloudflared prints the URL to stderr
       const match = output.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
       if (match) {
         clearTimeout(timeout);
@@ -36,8 +34,8 @@ function startCloudflared(port) {
       }
     };
 
-    proc.stderr.on('data', handleData);
-    proc.stdout.on('data', handleData);
+    proc.stderr?.on('data', handleData);
+    proc.stdout?.on('data', handleData);
 
     proc.on('error', (err) => {
       clearTimeout(timeout);
@@ -56,7 +54,7 @@ function startCloudflared(port) {
 /**
  * Try localtunnel as fallback (npx-based, no install needed)
  */
-function startLocaltunnel(port) {
+function startLocaltunnel(port: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn('npx', ['-y', 'localtunnel', '--port', String(port)], {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -67,7 +65,7 @@ function startLocaltunnel(port) {
       reject(new Error('localtunnel timed out'));
     }, 60000);
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout?.on('data', (data: Buffer) => {
       output += data.toString();
       const match = output.match(/https:\/\/[a-z0-9-]+\.loca\.lt/);
       if (match) {
@@ -78,7 +76,7 @@ function startLocaltunnel(port) {
       }
     });
 
-    proc.stderr.on('data', (data) => {
+    proc.stderr?.on('data', (data: Buffer) => {
       output += data.toString();
     });
 
@@ -92,13 +90,13 @@ function startLocaltunnel(port) {
 /**
  * Start tunnel with auto-detection
  */
-async function startTunnel(port) {
+export async function startTunnel(port: number): Promise<string> {
   console.log('[tunnel] Attempting cloudflared quick tunnel...');
   try {
     const url = await startCloudflared(port);
     console.log(`[tunnel] cloudflared tunnel active: ${url}`);
     return url;
-  } catch (e) {
+  } catch (e: any) {
     console.log(`[tunnel] cloudflared failed: ${e.message}`);
   }
 
@@ -107,11 +105,10 @@ async function startTunnel(port) {
     const url = await startLocaltunnel(port);
     console.log(`[tunnel] localtunnel active: ${url}`);
     return url;
-  } catch (e) {
+  } catch (e: any) {
     console.log(`[tunnel] localtunnel failed: ${e.message}`);
   }
 
-  // Final fallback: just use localhost
   const localUrl = `http://localhost:${port}`;
   publicUrl = localUrl;
   console.log(`[tunnel] No tunnel available. Using local URL: ${localUrl}`);
@@ -119,22 +116,14 @@ async function startTunnel(port) {
   return localUrl;
 }
 
-/**
- * Get current public URL
- */
-function getPublicUrl() {
+export function getPublicUrl(): string | null {
   return publicUrl;
 }
 
-/**
- * Stop tunnel
- */
-function stopTunnel() {
+export function stopTunnel(): void {
   if (tunnelProcess) {
     tunnelProcess.kill();
     tunnelProcess = null;
     publicUrl = null;
   }
 }
-
-module.exports = { startTunnel, getPublicUrl, stopTunnel };
