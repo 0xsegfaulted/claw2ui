@@ -11,6 +11,7 @@
  *   GET  /api/pages/:id      - Get page metadata
  *   DELETE /api/pages/:id    - Delete a page
  *   GET  /api/platforms      - List available format platforms
+ *   GET  /api/themes         - List available rendering themes
  *   GET  /api/status         - Server status & public URL
  *   GET  /p/:id              - View a rendered page (public, no auth)
  */
@@ -22,6 +23,7 @@ import { savePage, getPage, listPages, deletePage } from './store';
 import { renderPage, renderRawPage } from './renderer';
 import { startTunnel, getPublicUrl, stopTunnel } from './tunnel';
 import { formatForAll, listPlatforms } from './platforms';
+import { listThemes } from './themes';
 import { saveToken as storeToken, getToken, listTokens as listAllTokens, revokeToken, findTokenById, checkDailyLimit, recordUsage, countRecentTokensByIp } from './token-store';
 import type { PageSpec } from './types';
 import { restoreFromBackup, isBackupEnabled } from './backup';
@@ -420,6 +422,10 @@ app.get('/api/platforms', requirePrivilegedAuth, (_req: Request, res: Response) 
   res.json(listPlatforms());
 });
 
+app.get('/api/themes', requireAuth, (_req: Request, res: Response) => {
+  res.json(listThemes());
+});
+
 app.get('/api/status', requireAuth, (_req: Request, res: Response) => {
   res.json({
     status: 'running',
@@ -427,6 +433,7 @@ app.get('/api/status', requireAuth, (_req: Request, res: Response) => {
     publicUrl: getPublicUrl(),
     pages: listPages().length,
     platforms: listPlatforms(),
+    themes: listThemes().map(t => t.id),
   });
 });
 
