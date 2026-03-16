@@ -203,7 +203,7 @@ describe('renderPage', () => {
     assert.ok(html.includes('alpinejs'));
     assert.ok(html.includes('chart.js'));
     assert.ok(html.includes('Hello'));
-    assert.ok(html.includes('Powered by ClawBoard'));
+    assert.ok(html.includes('Powered by Claw2UI'));
   });
 
   it('generates og:title meta tag', () => {
@@ -236,5 +236,207 @@ describe('renderRawPage', () => {
     assert.ok(html.includes('<h1>Hello</h1>'));
     assert.ok(html.includes('tailwindcss'));
     assert.ok(html.includes('<title>Test</title>'));
+  });
+});
+
+// === Security Tests ===
+
+describe('XSS prevention - chart', () => {
+  it('rejects invalid chartType and falls back to line', () => {
+    const html = renderComponent({
+      type: 'chart',
+      props: { chartType: "bar';alert(1);//", data: { labels: ['A'], datasets: [{ data: [1] }] } },
+    });
+    assert.ok(html.includes("type: 'line'"));
+    assert.ok(!html.includes("bar';alert(1)"));
+  });
+
+  it('accepts valid chartType values', () => {
+    for (const ct of ['line', 'bar', 'pie', 'doughnut', 'radar', 'polarArea', 'bubble', 'scatter']) {
+      const html = renderComponent({
+        type: 'chart',
+        props: { chartType: ct, data: { labels: ['A'], datasets: [{ data: [1] }] } },
+      });
+      assert.ok(html.includes(`type: '${ct}'`), `chartType ${ct} should be accepted`);
+    }
+  });
+
+  it('escapes </script> in chart data to prevent script breakout', () => {
+    const html = renderComponent({
+      type: 'chart',
+      props: {
+        chartType: 'bar',
+        data: { labels: ['</script><script>alert(1)</script>'], datasets: [{ data: [1] }] },
+      },
+    });
+    assert.ok(!html.includes('</script><script>'));
+    assert.ok(html.includes('<\\/script>'));
+  });
+
+  it('sanitizes height prop to integer', () => {
+    const html = renderComponent({
+      type: 'chart',
+      props: { chartType: 'bar', height: '300px;background:red', data: {} },
+    });
+    assert.ok(html.includes('height: 300px'));
+    assert.ok(!html.includes('background:red'));
+  });
+});
+
+describe('XSS prevention - button', () => {
+  it('does not render onClick prop', () => {
+    const html = renderComponent({
+      type: 'button',
+      props: { label: 'Go', onClick: 'alert(1)' },
+    });
+    assert.ok(!html.includes('onclick'));
+    assert.ok(!html.includes('alert(1)'));
+    assert.ok(html.includes('Go'));
+  });
+});
+
+describe('XSS prevention - tabs', () => {
+  it('escapes tab.id containing JS injection in Alpine attributes', () => {
+    const html = renderComponent({
+      type: 'tabs',
+      props: { tabs: [{ id: "x';alert(1);//", label: 'Tab1', children: [] }] },
+    });
+    assert.ok(!html.includes("x';alert(1)"));
+    assert.ok(html.includes("\\'"));
+  });
+
+  it('escapes double quotes in tab.id to prevent attribute breakout', () => {
+    const html = renderComponent({
+      type: 'tabs',
+      props: { tabs: [{ id: 'x" x-init="alert(1)', label: 'Tab1', children: [] }] },
+    });
+    assert.ok(!html.includes('x-init="alert'));
+    assert.ok(html.includes('\\x22'));
+  });
+});
+
+describe('XSS prevention - table', () => {
+  it('escapes col.key in Alpine JS contexts', () => {
+    const html = renderComponent({
+      type: 'table',
+      props: {
+        columns: [{ key: "name';alert(1);//", label: 'Name' }],
+        rows: [{ "name';alert(1);//": 'val' }],
+      },
+    });
+    assert.ok(!html.includes("name';alert(1)"));
+  });
+});
+
+describe('XSS prevention - stat', () => {
+  it('escapes icon prop to prevent HTML injection', () => {
+    const html = renderComponent({
+      type: 'stat',
+      props: { label: 'Test', value: '100', icon: '<img src=x onerror=alert(1)>' },
+    });
+    assert.ok(!html.includes('<img'));
+    assert.ok(html.includes('&lt;img'));
+  });
+});
+
+describe('XSS prevention - markdown', () => {
+  it('strips script tags from markdown content', () => {
+    const html = renderComponent({
+      type: 'markdown',
+      props: { content: '<b>bold</b><script>alert(1)</script>' },
+    });
+    assert.ok(html.includes('<b>bold</b>'));
+    assert.ok(!html.includes('<script>'));
+  });
+
+  it('strips event handlers from markdown content', () => {
+    const html = renderComponent({
+      type: 'markdown',
+      props: { content: '<div onmouseover="alert(1)">hover</div>' },
+    });
+    assert.ok(!html.includes('onmouseover'));
+    assert.ok(html.includes('hover'));
+  });
+});
+
+describe('XSS prevention - html component (sanitizeHtml)', () => {
+  it('strips iframe tags', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<iframe src="evil.com"></iframe><p>safe</p>' },
+    });
+    assert.ok(!html.includes('<iframe'));
+    assert.ok(html.includes('safe'));
+  });
+
+  it('strips object and embed tags', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<object data="x"></object><embed src="y"><p>ok</p>' },
+    });
+    assert.ok(!html.includes('<object'));
+    assert.ok(!html.includes('<embed'));
+    assert.ok(html.includes('ok'));
+  });
+
+  it('strips form tags', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<form action="evil"><input></form>' },
+    });
+    assert.ok(!html.includes('<form'));
+  });
+
+  it('strips style tags with content', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<style>body{display:none}</style><p>visible</p>' },
+    });
+    assert.ok(!html.includes('<style>'));
+    assert.ok(!html.includes('display:none'));
+    assert.ok(html.includes('visible'));
+  });
+
+  it('strips base and meta tags', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<base href="evil"><meta http-equiv="refresh" content="0;url=evil"><p>ok</p>' },
+    });
+    assert.ok(!html.includes('<base'));
+    assert.ok(!html.includes('<meta'));
+    assert.ok(html.includes('ok'));
+  });
+
+  it('blocks unquoted javascript: URLs', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<a href=javascript:alert(1)>click</a>' },
+    });
+    assert.ok(!html.includes('javascript:'));
+  });
+
+  it('blocks quoted javascript: URLs', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<a href="javascript:alert(1)">click</a>' },
+    });
+    assert.ok(!html.includes('javascript:'));
+  });
+
+  it('strips srcdoc attributes', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<iframe srcdoc="<script>alert(1)</script>"></iframe>' },
+    });
+    assert.ok(!html.includes('srcdoc'));
+  });
+
+  it('strips event handlers on any element', () => {
+    const html = renderComponent({
+      type: 'html',
+      props: { content: '<img src="x" onerror="alert(1)"><div onclick="evil()">text</div>' },
+    });
+    assert.ok(!html.includes('onerror'));
+    assert.ok(!html.includes('onclick'));
   });
 });

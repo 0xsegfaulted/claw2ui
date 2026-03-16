@@ -117,3 +117,65 @@ describe('deletePage', () => {
     assert.equal(deletePage('nonexistent12'), false);
   });
 });
+
+// === Security Tests ===
+
+describe('savePage page limit', () => {
+  const bulkIds = [];
+
+  afterEach(() => {
+    for (const id of bulkIds) {
+      const file = path.join(PAGES_DIR, `${id}.json`);
+      try { fs.unlinkSync(file); } catch {}
+    }
+    bulkIds.length = 0;
+  });
+
+  it('throws when MAX_PAGES (500) is reached', () => {
+    // Create dummy files to simulate near-limit (use small files to be fast)
+    const existing = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.json'));
+    const needed = 500 - existing.length;
+
+    // Create fake page files to fill up to limit
+    for (let i = 0; i < needed; i++) {
+      const fakeId = `fake_${String(i).padStart(5, '0')}`;
+      const fakePath = path.join(PAGES_DIR, `${fakeId}.json`);
+      fs.writeFileSync(fakePath, JSON.stringify({
+        id: fakeId,
+        html: '<p>fake</p>',
+        spec: null,
+        meta: { title: 'Fake', type: 'page', createdAt: Date.now(), ttl: 0, views: 0 },
+      }));
+      bulkIds.push(fakeId);
+    }
+
+    // Now savePage should throw
+    assert.throws(() => {
+      const result = savePage('<p>Over limit</p>', { title: 'Over' });
+      bulkIds.push(result.id);
+    }, /Page limit reached/);
+  });
+
+  it('cleans expired pages before rejecting at limit', () => {
+    const existing = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.json'));
+    const needed = 500 - existing.length;
+
+    // Fill up with expired pages (ttl=1ms, created in the past)
+    for (let i = 0; i < needed; i++) {
+      const fakeId = `exp_${String(i).padStart(5, '0')}`;
+      const fakePath = path.join(PAGES_DIR, `${fakeId}.json`);
+      fs.writeFileSync(fakePath, JSON.stringify({
+        id: fakeId,
+        html: '<p>expired</p>',
+        spec: null,
+        meta: { title: 'Expired', type: 'page', createdAt: 1000, ttl: 1, views: 0 },
+      }));
+      bulkIds.push(fakeId);
+    }
+
+    // Should succeed because expired pages get cleaned
+    const result = savePage('<p>New page</p>', { title: 'New' });
+    bulkIds.push(result.id);
+    assert.ok(result.id);
+  });
+});
