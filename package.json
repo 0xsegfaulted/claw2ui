@@ -34,15 +34,15 @@
     "cloudflare-tunnel",
     "visualization"
   ],
-  "author": "",
+  "author": "0xsegfaulted",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/0xsegfaulted/clawboard.git"
+    "url": "https://github.com/0xsegfaulted/claw2ui.git"
   },
-  "homepage": "https://github.com/0xsegfaulted/clawboard",
+  "homepage": "https://github.com/0xsegfaulted/claw2ui",
   "bugs": {
-    "url": "https://github.com/0xsegfaulted/clawboard/issues"
+    "url": "https://github.com/0xsegfaulted/claw2ui/issues"
   },
   "type": "commonjs",
   "dependencies": {
