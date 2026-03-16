@@ -1,0 +1,111 @@
+{
+  "title": "Analytics Report",
+  "theme": "auto",
+  "components": [
+    {
+      "type": "container",
+      "children": [
+        {
+          "type": "header",
+          "props": {
+            "title": "Analytics Report",
+            "subtitle": "March 2026"
+          }
+        },
+        {
+          "type": "row",
+          "props": { "cols": 3, "gap": 4 },
+          "children": [
+            { "type": "stat", "props": { "label": "Total Users", "value": "12,847", "change": 18.5, "icon": "👥" } },
+            { "type": "stat", "props": { "label": "Page Views", "value": "89,234", "change": 24.3, "icon": "👁️" } },
+            { "type": "stat", "props": { "label": "Bounce Rate", "value": "32.1%", "change": -5.7, "icon": "📉" } }
+          ]
+        },
+        {
+          "type": "card",
+          "props": { "title": "Traffic Overview" },
+          "children": [
+            {
+              "type": "chart",
+              "props": {
+                "chartType": "bar",
+                "height": 300,
+                "data": {
+                  "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                  "datasets": [
+                    {
+                      "label": "Page Views",
+                      "data": [12500, 15200, 14800, 16300, 13900, 8500, 7200],
+                      "backgroundColor": "rgba(59, 130, 246, 0.8)"
+                    },
+                    {
+                      "label": "Unique Visitors",
+                      "data": [4200, 5100, 4900, 5400, 4600, 2800, 2400],
+                      "backgroundColor": "rgba(16, 185, 129, 0.8)"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "props": { "cols": 2, "gap": 4 },
+          "children": [
+            {
+              "type": "card",
+              "props": { "title": "Traffic Sources" },
+              "children": [
+                {
+                  "type": "chart",
+                  "props": {
+                    "chartType": "pie",
+                    "height": 250,
+                    "data": {
+                      "labels": ["Direct", "Search", "Social", "Referral", "Email"],
+                      "datasets": [{
+                        "data": [35, 28, 18, 12, 7],
+                        "backgroundColor": [
+                          "rgb(59, 130, 246)",
+                          "rgb(16, 185, 129)",
+                          "rgb(249, 115, 22)",
+                          "rgb(139, 92, 246)",
+                          "rgb(236, 72, 153)"
+                        ]
+                      }]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "card",
+              "props": { "title": "Top Pages" },
+              "children": [
+                {
+                  "type": "table",
+                  "props": {
+                    "searchable": false,
+                    "columns": [
+                      { "key": "page", "label": "Page" },
+                      { "key": "views", "label": "Views" },
+                      { "key": "bounce", "label": "Bounce", "format": "percent" }
+                    ],
+                    "rows": [
+                      { "page": "/", "views": "23,456", "bounce": 28 },
+                      { "page": "/products", "views": "15,234", "bounce": 35 },
+                      { "page": "/pricing", "views": "12,567", "bounce": 22 },
+                      { "page": "/docs", "views": "9,876", "bounce": 18 },
+                      { "page": "/blog", "views": "7,654", "bounce": 45 }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

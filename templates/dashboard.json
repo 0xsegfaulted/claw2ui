@@ -1,0 +1,125 @@
+{
+  "title": "System Dashboard",
+  "theme": "auto",
+  "components": [
+    {
+      "type": "container",
+      "children": [
+        {
+          "type": "header",
+          "props": {
+            "title": "System Dashboard",
+            "subtitle": "Real-time overview"
+          }
+        },
+        {
+          "type": "row",
+          "props": { "cols": 4, "gap": 4 },
+          "children": [
+            {
+              "type": "stat",
+              "props": { "label": "CPU Usage", "value": "42%", "change": -5.2, "icon": "🖥️" }
+            },
+            {
+              "type": "stat",
+              "props": { "label": "Memory", "value": "6.2 GB", "change": 3.1, "icon": "💾" }
+            },
+            {
+              "type": "stat",
+              "props": { "label": "Disk I/O", "value": "120 MB/s", "change": 15.0, "icon": "💿" }
+            },
+            {
+              "type": "stat",
+              "props": { "label": "Network", "value": "45 Mbps", "change": -2.3, "icon": "🌐" }
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "props": { "cols": 2, "gap": 4 },
+          "children": [
+            {
+              "type": "card",
+              "props": { "title": "CPU Usage (24h)" },
+              "children": [
+                {
+                  "type": "chart",
+                  "props": {
+                    "chartType": "line",
+                    "height": 250,
+                    "data": {
+                      "labels": ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"],
+                      "datasets": [
+                        {
+                          "label": "CPU %",
+                          "data": [25, 18, 35, 65, 72, 58, 42],
+                          "borderColor": "rgb(59, 130, 246)",
+                          "backgroundColor": "rgba(59, 130, 246, 0.1)",
+                          "fill": true,
+                          "tension": 0.4
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "card",
+              "props": { "title": "Memory Allocation" },
+              "children": [
+                {
+                  "type": "chart",
+                  "props": {
+                    "chartType": "doughnut",
+                    "height": 250,
+                    "data": {
+                      "labels": ["Used", "Cached", "Buffers", "Free"],
+                      "datasets": [
+                        {
+                          "data": [6.2, 3.5, 1.8, 4.5],
+                          "backgroundColor": [
+                            "rgb(239, 68, 68)",
+                            "rgb(249, 115, 22)",
+                            "rgb(234, 179, 8)",
+                            "rgb(34, 197, 94)"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "card",
+          "props": { "title": "Service Status" },
+          "children": [
+            {
+              "type": "table",
+              "props": {
+                "columns": [
+                  { "key": "service", "label": "Service" },
+                  { "key": "status", "label": "Status", "format": "badge", "badgeMap": { "Running": "success", "Stopped": "error", "Starting": "warning" } },
+                  { "key": "cpu", "label": "CPU", "format": "percent" },
+                  { "key": "memory", "label": "Memory" },
+                  { "key": "uptime", "label": "Uptime" }
+                ],
+                "rows": [
+                  { "service": "nginx", "status": "Running", "cpu": 2.1, "memory": "128 MB", "uptime": "15d 4h" },
+                  { "service": "postgres", "status": "Running", "cpu": 8.5, "memory": "1.2 GB", "uptime": "15d 4h" },
+                  { "service": "redis", "status": "Running", "cpu": 1.2, "memory": "256 MB", "uptime": "15d 4h" },
+                  { "service": "worker-1", "status": "Running", "cpu": 15.3, "memory": "512 MB", "uptime": "3d 12h" },
+                  { "service": "worker-2", "status": "Stopped", "cpu": 0, "memory": "0 MB", "uptime": "-" },
+                  { "service": "cron", "status": "Running", "cpu": 0.5, "memory": "64 MB", "uptime": "15d 4h" }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
