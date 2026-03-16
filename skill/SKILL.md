@@ -1,48 +1,48 @@
 ---
-name: clawboard
-description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill whenever the user asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or ANY content that would be better presented as a web page than plain text. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "clawboard". Even if the user doesn''t explicitly ask for a web page, if the response would benefit from charts, sortable tables, or rich layout, use ClawBoard proactively.'
+name: claw2ui
+description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill whenever the user asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or ANY content that would be better presented as a web page than plain text. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "claw2ui". Even if the user doesn''t explicitly ask for a web page, if the response would benefit from charts, sortable tables, or rich layout, use Claw2UI proactively.'
 ---
 
-# ClawBoard - Agent-to-UI Bridge
+# Claw2UI - Agent-to-UI Bridge
 
 Generate interactive web pages from declarative JSON specs and serve them via cloudflared tunnel. Pages include Tailwind CSS, Alpine.js, and Chart.js out of the box.
 
 ## Project Location
 
-> **IMPORTANT**: Update the path below to match your ClawBoard installation.
+> **IMPORTANT**: Update the path below to match your Claw2UI installation.
 
 ```
 # If installed globally via npm:
-# Run `npm root -g` to find the path, then append /clawboard
-# Example: /usr/local/lib/node_modules/clawboard
+# Run `npm root -g` to find the path, then append /claw2ui
+# Example: /usr/local/lib/node_modules/claw2ui
 
 # If cloned from source:
 # Use the path where you cloned the repo
-# Example: /home/user/projects/clawboard
+# Example: /home/user/projects/claw2ui
 
 CLAWBOARD_DIR="<YOUR_CLAWBOARD_PATH>"
 ```
 
 ## CLI Tool
 
-All operations go through the `clawboard` CLI. Run from anywhere after `npm install -g clawboard`.
+All operations go through the `claw2ui` CLI. Run from anywhere after `npm install -g claw2ui`.
 
 ### Commands
 
 ```bash
 # Server lifecycle
-clawboard status                          # Check if server is running
-clawboard start                           # Start server + tunnel
-clawboard start --no-tunnel               # Start without tunnel (localhost only)
+claw2ui status                          # Check if server is running
+claw2ui start                           # Start server + tunnel
+claw2ui start --no-tunnel               # Start without tunnel (localhost only)
 
 # Publish a page
-clawboard publish --spec-file /tmp/page.json --title "Dashboard"
-clawboard publish --html "<h1>Hello</h1>" --title "Test"
-clawboard publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
+claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
+claw2ui publish --html "<h1>Hello</h1>" --title "Test"
+claw2ui publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
 
 # Manage pages
-clawboard list                            # List all pages
-clawboard delete <page-id>                # Delete a page
+claw2ui list                            # List all pages
+claw2ui delete <page-id>                # Delete a page
 ```
 
 ### Fixed Domain (Named Tunnel)
@@ -50,9 +50,9 @@ clawboard delete <page-id>                # Delete a page
 If you have a Cloudflare domain configured:
 
 ```bash
-export CLAWBOARD_TUNNEL_NAME=clawboard
+export CLAWBOARD_TUNNEL_NAME=claw2ui
 export CLAWBOARD_TUNNEL_URL=https://board.yourdomain.com
-clawboard start
+claw2ui start
 ```
 
 This gives a permanent URL that never changes across restarts.
@@ -62,9 +62,9 @@ This gives a permanent URL that never changes across restarts.
 ### Step 1: Ensure Server is Running
 
 ```bash
-clawboard status
+claw2ui status
 # If not running:
-clawboard start
+claw2ui start
 ```
 
 ### Step 2: Build the A2UI Spec
@@ -72,7 +72,7 @@ clawboard start
 Write the spec to a temp file. Always wrap content in a `container`.
 
 ```bash
-cat > /tmp/clawboard_page.json << 'SPECEOF'
+cat > /tmp/claw2ui_page.json << 'SPECEOF'
 {
   "title": "Page Title",
   "components": [
@@ -88,7 +88,7 @@ SPECEOF
 ### Step 3: Publish
 
 ```bash
-clawboard publish --spec-file /tmp/clawboard_page.json --title "Dashboard"
+claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard"
 ```
 
 Outputs the public URL.

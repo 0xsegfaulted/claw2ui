@@ -3,7 +3,7 @@
  * Priority: named tunnel (if configured) > cloudflared quick tunnel > localtunnel
  *
  * Named tunnel config (env vars):
- *   CLAWBOARD_TUNNEL_NAME  - cloudflared tunnel name (e.g. "clawboard")
+ *   CLAWBOARD_TUNNEL_NAME  - cloudflared tunnel name (e.g. "claw2ui")
  *   CLAWBOARD_TUNNEL_URL   - fixed public URL (e.g. "https://board.example.com")
  */
 import { spawn, ChildProcess } from 'child_process';

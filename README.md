@@ -1,8 +1,8 @@
-# ClawBoard
+# Claw2UI
 
 Agent-to-UI bridge: let AI agents generate interactive web pages and serve them via a public URL.
 
-ClawBoard takes a declarative JSON spec (or raw HTML) and renders it into a fully interactive page with Tailwind CSS, Alpine.js, and Chart.js — accessible anywhere through a Cloudflare Tunnel.
+Claw2UI takes a declarative JSON spec (or raw HTML) and renders it into a fully interactive page with Tailwind CSS, Alpine.js, and Chart.js — accessible anywhere through a Cloudflare Tunnel.
 
 ## Features
 
@@ -18,20 +18,20 @@ ClawBoard takes a declarative JSON spec (or raw HTML) and renders it into a full
 
 ```bash
 # Install globally
-npm install -g clawboard
+npm install -g claw2ui
 
 # Start the server (opens a tunnel automatically)
-clawboard start
+claw2ui start
 
 # Publish a page from a JSON spec
-clawboard publish --spec-file dashboard.json --title "My Dashboard"
+claw2ui publish --spec-file dashboard.json --title "My Dashboard"
 # → https://random-words.trycloudflare.com/p/abc123
 ```
 
 ## Installation
 
 ```bash
-npm install -g clawboard
+npm install -g claw2ui
 ```
 
 **Optional**: Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) for public tunnel access:
@@ -44,19 +44,19 @@ brew install cloudflared
 # See https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
 ```
 
-Without cloudflared, ClawBoard falls back to [localtunnel](https://github.com/localtunnel/localtunnel) or localhost-only mode.
+Without cloudflared, Claw2UI falls back to [localtunnel](https://github.com/localtunnel/localtunnel) or localhost-only mode.
 
 ## Usage
 
 ### CLI Commands
 
 ```bash
-clawboard start                    # Start server + tunnel
-clawboard status                   # Check server status
-clawboard publish --spec-file <file> --title "Title"  # Publish from spec
-clawboard publish --html "<h1>Hi</h1>" --title "Test" # Publish raw HTML
-clawboard list                     # List all pages
-clawboard delete <page-id>         # Delete a page
+claw2ui start                    # Start server + tunnel
+claw2ui status                   # Check server status
+claw2ui publish --spec-file <file> --title "Title"  # Publish from spec
+claw2ui publish --html "<h1>Hi</h1>" --title "Test" # Publish raw HTML
+claw2ui list                     # List all pages
+claw2ui delete <page-id>         # Delete a page
 ```
 
 ### Publish Options
@@ -72,7 +72,7 @@ clawboard delete <page-id>         # Delete a page
 
 ### API
 
-ClawBoard runs on `http://localhost:9800` by default.
+Claw2UI runs on `http://localhost:9800` by default.
 
 ```bash
 # Create a page
@@ -137,7 +137,7 @@ See [CLAUDE.md](./CLAUDE.md) for full component documentation with all props.
 Copy the example config and fill in your values:
 
 ```bash
-cp clawboard.config.example.json clawboard.config.json
+cp claw2ui.config.example.json claw2ui.config.json
 ```
 
 ```json
@@ -165,12 +165,12 @@ For a permanent URL instead of random quick tunnel URLs:
 
 ```bash
 cloudflared tunnel login
-cloudflared tunnel create clawboard
-cloudflared tunnel route dns clawboard board.yourdomain.com
+cloudflared tunnel create claw2ui
+cloudflared tunnel route dns claw2ui board.yourdomain.com
 
-export CLAWBOARD_TUNNEL_NAME=clawboard
+export CLAWBOARD_TUNNEL_NAME=claw2ui
 export CLAWBOARD_TUNNEL_URL=https://board.yourdomain.com
-clawboard start
+claw2ui start
 ```
 
 ### Environment Variables
@@ -188,16 +188,16 @@ clawboard start
 
 ## Claude Code Skill
 
-ClawBoard includes a skill definition for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). To install:
+Claw2UI includes a skill definition for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). To install:
 
 ```bash
-mkdir -p ~/.claude/skills/clawboard
+mkdir -p ~/.claude/skills/claw2ui
 
 # If installed globally via npm:
-cp "$(npm root -g)/clawboard/skill/SKILL.md" ~/.claude/skills/clawboard/SKILL.md
+cp "$(npm root -g)/claw2ui/skill/SKILL.md" ~/.claude/skills/claw2ui/SKILL.md
 
 # Or if cloned from source:
-cp /path/to/clawboard/skill/SKILL.md ~/.claude/skills/clawboard/SKILL.md
+cp /path/to/claw2ui/skill/SKILL.md ~/.claude/skills/claw2ui/SKILL.md
 ```
 
 ## Adding New Platforms
@@ -208,8 +208,8 @@ cp /path/to/clawboard/skill/SKILL.md ~/.claude/skills/clawboard/SKILL.md
 ## Development
 
 ```bash
-git clone https://github.com/0xsegfaulted/clawboard.git
-cd clawboard
+git clone https://github.com/0xsegfaulted/claw2ui.git
+cd claw2ui
 npm install
 npm run build    # Compile TypeScript
 npm run dev      # Watch mode

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Ensure ClawBoard server is running. If not, start it.
+ * Ensure Claw2UI server is running. If not, start it.
  * Outputs the public URL (or localhost URL) to stdout.
  */
 import http from 'http';

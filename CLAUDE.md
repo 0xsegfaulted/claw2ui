@@ -1,6 +1,6 @@
-# ClawBoard - Agent-to-UI Bridge
+# Claw2UI - Agent-to-UI Bridge
 
-ClawBoard lets you generate interactive web pages (dashboards, charts, tables, forms) and serve them via a public URL through Cloudflare Tunnel. When a user asks for something better expressed as a visual UI rather than text, use ClawBoard to render it and send the URL.
+Claw2UI lets you generate interactive web pages (dashboards, charts, tables, forms) and serve them via a public URL through Cloudflare Tunnel. When a user asks for something better expressed as a visual UI rather than text, use Claw2UI to render it and send the URL.
 
 ## Architecture
 
@@ -8,15 +8,15 @@ ClawBoard lets you generate interactive web pages (dashboards, charts, tables, f
 User sends msg via IM (Telegram/Feishu/Discord)
   → cc-connect forwards to Claude Code
   → Claude Code generates A2UI spec or HTML
-  → Posts to ClawBoard API (localhost:9800)
-  → ClawBoard renders & serves via cloudflared tunnel
+  → Posts to Claw2UI API (localhost:9800)
+  → Claw2UI renders & serves via cloudflared tunnel
   → Claude Code sends public URL back via IM
   → User clicks URL → sees interactive dashboard
 ```
 
 ## Quick Start
 
-The ClawBoard server must be running. Check and start if needed:
+The Claw2UI server must be running. Check and start if needed:
 ```bash
 # Check if running
 curl -s http://localhost:9800/api/status
@@ -32,18 +32,18 @@ npm start
 ### CLI (recommended)
 ```bash
 # From spec file
-clawboard publish --spec-file /tmp/page.json --title "Dashboard"
+claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
 
 # Raw HTML
-clawboard publish --html "<h1>Hello</h1>" --title "Test"
+claw2ui publish --html "<h1>Hello</h1>" --title "Test"
 
 # With TTL (auto-expire)
-clawboard publish --spec-file /tmp/page.json --title "Temp" --ttl 3600000
+claw2ui publish --spec-file /tmp/page.json --title "Temp" --ttl 3600000
 
 # Manage pages
-clawboard list
-clawboard delete <page-id>
-clawboard status
+claw2ui list
+claw2ui delete <page-id>
+claw2ui status
 ```
 
 ### API
@@ -51,7 +51,7 @@ clawboard status
 # Publish spec
 URL=$(curl -s -X POST http://localhost:9800/api/pages \
   -H "Content-Type: application/json" \
-  -d @/tmp/clawboard_page.json | python3 -c "import sys,json; print(json.load(sys.stdin)['url'])")
+  -d @/tmp/claw2ui_page.json | python3 -c "import sys,json; print(json.load(sys.stdin)['url'])")
 
 # Publish raw HTML
 URL=$(curl -s -X POST http://localhost:9800/api/pages \
@@ -122,19 +122,19 @@ The API response includes `formats` with platform-specific summaries (e.g. `form
 
 To use a permanent URL instead of random quick tunnel URLs:
 
-1. Set up Cloudflare: `cloudflared tunnel login` → `cloudflared tunnel create clawboard` → `cloudflared tunnel route dns clawboard board.yourdomain.com`
+1. Set up Cloudflare: `cloudflared tunnel login` → `cloudflared tunnel create claw2ui` → `cloudflared tunnel route dns claw2ui board.yourdomain.com`
 2. Configure env vars before starting:
 ```bash
-export CLAWBOARD_TUNNEL_NAME=clawboard
+export CLAWBOARD_TUNNEL_NAME=claw2ui
 export CLAWBOARD_TUNNEL_URL=https://board.yourdomain.com
 bash start.sh
 ```
 
 Or add to your shell profile for persistence. The server will use the named tunnel instead of a random quick tunnel.
 
-## When to Use ClawBoard
+## When to Use Claw2UI
 
-Use ClawBoard when the user asks for:
+Use Claw2UI when the user asks for:
 - Dashboards, analytics, or data visualization
 - Tables with lots of data
 - Charts (line, bar, pie, etc.)

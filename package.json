@@ -1,10 +1,10 @@
 {
-  "name": "clawboard",
+  "name": "claw2ui",
   "version": "2.0.0",
   "description": "Agent-to-UI bridge: serve interactive pages from IM agents via tunnel",
   "main": "dist/server.js",
   "bin": {
-    "clawboard": "./bin/clawboard.js"
+    "claw2ui": "./bin/claw2ui.js"
   },
   "scripts": {
     "build": "tsc",
@@ -19,7 +19,7 @@
     "skill/",
     "start.sh",
     "stop.sh",
-    "clawboard.config.example.json",
+    "claw2ui.config.example.json",
     "README.md",
     "LICENSE"
   ],
@@ -29,7 +29,7 @@
     "tunnel",
     "im",
     "dashboard",
-    "clawboard",
+    "claw2ui",
     "a2ui",
     "cloudflare-tunnel",
     "visualization"

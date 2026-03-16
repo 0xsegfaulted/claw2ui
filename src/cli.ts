@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ClawBoard CLI - publish pages from the command line
+ * Claw2UI CLI - publish pages from the command line
  */
 import http from 'http';
 import https from 'https';
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
   const command = args[0];
 
   if (!command || command === '--help' || command === '-h') {
-    console.log(`ClawBoard CLI - Agent-to-UI Bridge
+    console.log(`Claw2UI CLI - Agent-to-UI Bridge
 
 Commands:
   publish    Create and publish a page
@@ -68,9 +68,9 @@ Publish options:
   --ttl <ms>           Time-to-live in milliseconds (0 = forever)
 
 Examples:
-  clawboard publish --spec-file spec.json --title "Dashboard"
-  clawboard publish --html "<h1>Hello</h1>" --title "Test"
-  clawboard status`);
+  claw2ui publish --spec-file spec.json --title "Dashboard"
+  claw2ui publish --html "<h1>Hello</h1>" --title "Test"
+  claw2ui status`);
     process.exit(0);
   }
 
@@ -132,7 +132,7 @@ Examples:
 
       case 'delete': {
         const id = args[1];
-        if (!id) { console.error('Usage: clawboard delete <id>'); process.exit(1); }
+        if (!id) { console.error('Usage: claw2ui delete <id>'); process.exit(1); }
         const result = await request('DELETE', `/api/pages/${id}`);
         console.log(result.deleted ? 'Deleted.' : 'Error: ' + (result.error || 'Unknown'));
         break;
@@ -157,12 +157,12 @@ Examples:
       }
 
       default:
-        console.error(`Unknown command: ${command}. Run 'clawboard --help' for usage.`);
+        console.error(`Unknown command: ${command}. Run 'claw2ui --help' for usage.`);
         process.exit(1);
     }
   } catch (err: any) {
     if (err.code === 'ECONNREFUSED') {
-      console.error('Error: ClawBoard server is not running. Start it with: clawboard start');
+      console.error('Error: Claw2UI server is not running. Start it with: claw2ui start');
     } else {
       console.error('Error:', err.message);
     }

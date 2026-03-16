@@ -440,7 +440,7 @@ function sanitizeHtml(html: string): string {
  * Render a full page from a component tree
  */
 export function renderPage(spec: PageSpec): string {
-  const title = spec.title || 'ClawBoard';
+  const title = spec.title || 'Claw2UI';
   const theme = spec.theme || 'auto';
   const components = spec.components || [];
   const description = generateDescription(components);
@@ -494,7 +494,7 @@ export function renderPage(spec: PageSpec): string {
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
   ${componentHtml}
   <div class="text-center py-4 text-xs text-gray-400 dark:text-gray-600">
-    Powered by ClawBoard
+    Powered by Claw2UI
   </div>
 </body>
 </html>`;
@@ -503,7 +503,7 @@ export function renderPage(spec: PageSpec): string {
 /**
  * Render raw HTML into a full page with just the base styling
  */
-export function renderRawPage(html: string, title: string = 'ClawBoard'): string {
+export function renderRawPage(html: string, title: string = 'Claw2UI'): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -527,14 +527,14 @@ export function renderRawPage(html: string, title: string = 'ClawBoard'): string
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
   ${html}
   <div class="text-center py-4 text-xs text-gray-400 dark:text-gray-600">
-    Powered by ClawBoard
+    Powered by Claw2UI
   </div>
 </body>
 </html>`;
 }
 
 function generateDescription(components: Component[]): string {
-  if (!Array.isArray(components)) return 'Interactive page powered by ClawBoard';
+  if (!Array.isArray(components)) return 'Interactive page powered by Claw2UI';
   const flat = flattenForDesc(components);
   const stats = flat.filter(c => c.type === 'stat').length;
   const charts = flat.filter(c => c.type === 'chart').length;
@@ -543,8 +543,8 @@ function generateDescription(components: Component[]): string {
   if (stats) parts.push(`${stats} metric${stats > 1 ? 's' : ''}`);
   if (charts) parts.push(`${charts} chart${charts > 1 ? 's' : ''}`);
   if (tables) parts.push(`${tables} table${tables > 1 ? 's' : ''}`);
-  if (parts.length === 0) return 'Interactive page powered by ClawBoard';
-  return `Dashboard with ${parts.join(', ')} - powered by ClawBoard`;
+  if (parts.length === 0) return 'Interactive page powered by Claw2UI';
+  return `Dashboard with ${parts.join(', ')} - powered by Claw2UI`;
 }
 
 function flattenForDesc(components: Component[]): Component[] {
