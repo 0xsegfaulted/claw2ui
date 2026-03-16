@@ -211,7 +211,7 @@ cp /path/to/clawboard/skill/SKILL.md ~/.claude/skills/clawboard/SKILL.md
 ## Development
 
 ```bash
-git clone https://github.com/anthropics/clawboard.git
+git clone https://github.com/0xsegfaulted/clawboard.git
 cd clawboard
 npm install
 npm run build    # Compile TypeScript

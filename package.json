@@ -38,11 +38,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropics/clawboard.git"
+    "url": "https://github.com/0xsegfaulted/clawboard.git"
   },
-  "homepage": "https://github.com/anthropics/clawboard",
+  "homepage": "https://github.com/0xsegfaulted/clawboard",
   "bugs": {
-    "url": "https://github.com/anthropics/clawboard/issues"
+    "url": "https://github.com/0xsegfaulted/clawboard/issues"
   },
   "type": "commonjs",
   "dependencies": {
