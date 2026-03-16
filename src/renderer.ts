@@ -235,8 +235,10 @@ export function renderComponent(comp: Component): string {
 
     // === A2UI Standard Components ===
 
-    case 'icon':
-      return `<span class="material-icons text-gray-600 dark:text-gray-400" style="font-size:${p.size || 24}px">${iconName(p.name)}</span>`;
+    case 'icon': {
+      const iconSize = parseInt(String(p.size), 10) || 24;
+      return `<span class="material-icons text-gray-600 dark:text-gray-400" style="font-size:${iconSize}px">${esc(String(iconName(p.name)))}</span>`;
+    }
 
     case 'video': {
       const videoSrc = (p.url || '').replace(/^\s*javascript:/i, '');
@@ -360,8 +362,8 @@ export function renderComponent(comp: Component): string {
       return `
         <div class="mb-3">
           ${p.label ? `<label for="${dtId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">${esc(p.label)}</label>` : ''}
-          <input id="${dtId}" type="${inputType}" value="${esc(p.value || '')}"
-            ${p.min ? `min="${esc(p.min)}"` : ''} ${p.max ? `max="${esc(p.max)}"` : ''}
+          <input id="${dtId}" type="${inputType}" value="${esc(normalizeDateValue(p.value, inputType))}"
+            ${p.min ? `min="${esc(normalizeDateValue(p.min, inputType))}"` : ''} ${p.max ? `max="${esc(normalizeDateValue(p.max, inputType))}"` : ''}
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         </div>`;
     }
@@ -386,6 +388,21 @@ function formatCell(value: any, col: ColumnDef): string {
     return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[badgeColor] || colors.info}">${esc(String(value))}</span>`;
   }
   return esc(String(value));
+}
+
+/** Normalize ISO 8601 values to HTML input-compatible formats */
+function normalizeDateValue(val: string | undefined, inputType: string): string {
+  if (!val) return '';
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    if (inputType === 'date') return d.toISOString().slice(0, 10);
+    if (inputType === 'time') return d.toISOString().slice(11, 16);
+    // datetime-local: YYYY-MM-DDTHH:mm
+    return d.toISOString().slice(0, 16);
+  } catch {
+    return val;
+  }
 }
 
 /** Map A2UI camelCase icon names to Material Icons snake_case */
