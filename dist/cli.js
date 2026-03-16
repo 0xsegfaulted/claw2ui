@@ -55,6 +55,7 @@ async function main() {
 
 Commands:
   publish    Create and publish a page
+  deliver    Deliver an existing page to a platform
   list       List all pages
   delete     Delete a page
   status     Show server status
@@ -67,10 +68,12 @@ Publish options:
   --spec-file <path>   Read spec from JSON file
   --title <title>      Page title
   --ttl <ms>           Time-to-live in milliseconds (0 = forever)
+  --deliver <platform> Deliver to platform (e.g. telegram)
 
 Examples:
-  clawboard publish --html "<h1>Hello World</h1>" --title "Test"
-  clawboard publish --spec-file spec.json --title "Analytics"
+  clawboard publish --spec-file spec.json --title "Dashboard" --deliver telegram
+  clawboard publish --html "<h1>Hello</h1>" --title "Test"
+  clawboard deliver <page-id> telegram
   clawboard status`);
         process.exit(0);
     }
@@ -83,6 +86,7 @@ Examples:
                 const specFile = getArg(args, '--spec-file');
                 const title = getArg(args, '--title') || 'Untitled';
                 const ttl = parseInt(getArg(args, '--ttl') || '0', 10);
+                const deliver = getArg(args, '--deliver');
                 const body = { title, ttl };
                 if (spec) {
                     body.spec = JSON.parse(spec);
@@ -100,12 +104,21 @@ Examples:
                 else {
                     body.html = fs_1.default.readFileSync('/dev/stdin', 'utf-8');
                 }
+                if (deliver) {
+                    body.deliver = { platform: deliver };
+                }
                 const result = await request('POST', '/api/pages', body);
                 if (result.error) {
                     console.error('Error:', result.error);
                     process.exit(1);
                 }
                 console.log(result.url);
+                if (result.delivery?.success) {
+                    console.error(`Delivered to ${deliver} (message ${result.delivery.messageId})`);
+                }
+                else if (deliver && result.delivery?.error) {
+                    console.error(`Warning: page published but delivery failed: ${result.delivery.error}`);
+                }
                 break;
             }
             case 'list': {
@@ -120,6 +133,23 @@ Examples:
                 }
                 else {
                     console.error('Error:', pages);
+                }
+                break;
+            }
+            case 'deliver': {
+                const id = args[1];
+                const platform = args[2] || 'telegram';
+                if (!id) {
+                    console.error('Usage: clawboard deliver <page-id> [platform]');
+                    process.exit(1);
+                }
+                const result = await request('POST', `/api/pages/${id}/deliver`, { platform });
+                if (result.success) {
+                    console.log(`Delivered to ${platform} (message ${result.messageId})`);
+                }
+                else {
+                    console.error('Error:', result.error || 'Unknown');
+                    process.exit(1);
                 }
                 break;
             }
