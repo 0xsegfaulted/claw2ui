@@ -1,11 +1,23 @@
 ---
 name: claw2ui
-description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill whenever the user asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or ANY content that would be better presented as a web page than plain text. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "claw2ui". Even if the user doesn''t explicitly ask for a web page, if the response would benefit from charts, sortable tables, or rich layout, use Claw2UI proactively.'
+description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill when the user explicitly asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or web-based content. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "claw2ui". If the response would benefit from charts, sortable tables, or rich layout, suggest using Claw2UI and wait for user confirmation before publishing.'
 ---
 
 # Claw2UI - Agent-to-UI Bridge
 
 Generate interactive web pages from declarative JSON specs and serve them via cloudflared tunnel. Pages include Tailwind CSS, Alpine.js, and Chart.js out of the box.
+
+> **Source & verification**: [GitHub](https://github.com/0xsegfaulted/claw2ui) · [npm](https://www.npmjs.com/package/claw2ui) · License: MIT
+
+## Data Safety
+
+**Every published page is accessible via a public URL.** Follow these rules:
+
+- **Never include** secrets, credentials, API keys, tokens, PII, or internal endpoints in page content
+- **Sanitize** all user-provided data before embedding it in pages — the `html` component is sanitized server-side, but avoid passing raw untrusted input to other components
+- **Always confirm with the user** before publishing. Do not publish pages without explicit user approval
+- **Use TTL** for ephemeral or sensitive data so pages auto-expire: `--ttl 3600000` (1 hour)
+- **Review content** before publishing — check that no sensitive information leaks through table rows, stat values, or chart labels
 
 ## Project Location
 
@@ -16,7 +28,8 @@ Generate interactive web pages from declarative JSON specs and serve them via cl
 # Run `npm root -g` to find the path, then append /claw2ui
 # Example: /usr/local/lib/node_modules/claw2ui
 
-# If cloned from source:
+# If cloned from source (recommended for verification):
+# git clone https://github.com/0xsegfaulted/claw2ui.git
 # Use the path where you cloned the repo
 # Example: /home/user/projects/claw2ui
 
@@ -25,7 +38,7 @@ CLAWBOARD_DIR="<YOUR_CLAWBOARD_PATH>"
 
 ## CLI Tool
 
-All operations go through the `claw2ui` CLI. Run from anywhere after `npm install -g claw2ui`.
+All operations go through the `claw2ui` CLI. Install via `npm install -g claw2ui` ([npm registry](https://www.npmjs.com/package/claw2ui)).
 
 ### Commands
 
@@ -47,15 +60,20 @@ claw2ui delete <page-id>                # Delete a page
 
 ### Fixed Domain (Named Tunnel)
 
-If you have a Cloudflare domain configured:
+If you have a Cloudflare domain configured. **Requires**: a Cloudflare account, `cloudflared` installed, and a tunnel certificate (`~/.cloudflared/cert.pem` created via `cloudflared tunnel login`).
 
 ```bash
+# One-time setup (requires Cloudflare account):
+# cloudflared tunnel login
+# cloudflared tunnel create claw2ui
+# cloudflared tunnel route dns claw2ui board.yourdomain.com
+
 export CLAWBOARD_TUNNEL_NAME=claw2ui
 export CLAWBOARD_TUNNEL_URL=https://board.yourdomain.com
 claw2ui start
 ```
 
-This gives a permanent URL that never changes across restarts.
+This gives a permanent URL that never changes across restarts. Without these env vars, `claw2ui start` uses a random quick tunnel (no Cloudflare account needed).
 
 ## Workflow
 
@@ -85,15 +103,25 @@ cat > /tmp/claw2ui_page.json << 'SPECEOF'
 SPECEOF
 ```
 
-### Step 3: Publish
+### Step 3: Confirm with User
+
+Before publishing, tell the user what will be published and confirm they want to proceed. The page will be accessible via a **public URL**. Example:
+
+> "I've prepared a dashboard with [summary of content]. Ready to publish it to a public URL? (Use `--ttl 3600000` for auto-expiry in 1 hour.)"
+
+### Step 4: Publish
+
+Only after user confirmation:
 
 ```bash
 claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard"
+# For sensitive/temporary data, always set a TTL:
+claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard" --ttl 3600000
 ```
 
 Outputs the public URL.
 
-### Step 4: Share the URL
+### Step 5: Share the URL
 
 Include the URL in your response to the user.
 

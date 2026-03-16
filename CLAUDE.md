@@ -134,12 +134,21 @@ Or add to your shell profile for persistence. The server will use the named tunn
 
 ## When to Use Claw2UI
 
-Use Claw2UI when the user asks for:
+Use Claw2UI when the user explicitly asks for:
 - Dashboards, analytics, or data visualization
 - Tables with lots of data
 - Charts (line, bar, pie, etc.)
 - Reports with visual layout
 - Any content where a web page is better than plain text
+
+If the user hasn't explicitly asked but the response would benefit from a web page, **suggest** it and wait for confirmation before publishing.
+
+## Data Safety
+
+**Pages are served via public URLs.** Before publishing:
+- Never include secrets, credentials, API keys, PII, or internal endpoints
+- Always confirm with the user before publishing
+- Use `--ttl` for temporary/sensitive data so pages auto-expire
 
 Include the URL in your response text. The API also returns platform-specific formatted summaries in `response.formats` that you can use for richer IM messages.
 
