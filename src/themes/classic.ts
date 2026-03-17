@@ -32,6 +32,7 @@ const theme: Theme = {
       .c2u-classic-tabs-nav::-webkit-scrollbar{display:none}
       .c2u-classic-tabs-nav button{white-space:nowrap;flex-shrink:0}
       @media(max-width:640px){
+        [class*="col-span-"]{grid-column:1/-1}
         .c2u-classic-stat{padding:1rem!important}
         .c2u-classic-stat .text-2xl{font-size:1.35rem!important}
         .c2u-classic-stat .text-sm{font-size:0.75rem!important}

@@ -252,6 +252,7 @@ function getDesignCSS(): string {
     .c2u-footer-accent{display:inline-block;width:24px;height:2px;background:var(--c2u-primary);border-radius:1px;margin-bottom:12px;opacity:0.5}
 
     @media(max-width:640px){
+      [class*="col-span-"]{grid-column:1/-1}
       .c2u-header-title{font-size:1.65rem}
       .c2u-header{margin-bottom:20px}
       .c2u-stat-value{font-size:1.35rem}

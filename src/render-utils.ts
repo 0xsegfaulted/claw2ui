@@ -117,5 +117,7 @@ export function responsiveGridCols(cols: number): string {
   if (!cols || cols <= 1) return 'grid-cols-1';
   if (cols === 2) return 'grid-cols-1 sm:grid-cols-2';
   if (cols <= 4) return `grid-cols-1 sm:grid-cols-2 lg:grid-cols-${cols}`;
-  return `grid-cols-2 sm:grid-cols-3 lg:grid-cols-${cols}`;
+  // Large grids (e.g. 12-col with col-span children) stack on mobile,
+  // full layout from tablet up to avoid span/grid mismatch
+  return `grid-cols-1 sm:grid-cols-${cols}`;
 }

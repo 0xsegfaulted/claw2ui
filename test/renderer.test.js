@@ -506,6 +506,13 @@ describe('mobile responsive - row grid', () => {
     assert.ok(!html.includes('sm:grid-cols'));
   });
 
+  it('large grids (cols=12) stack on mobile, full layout from tablet', () => {
+    const html = renderComponent({ type: 'row', props: { cols: 12 }, children: [] });
+    assert.ok(html.includes('grid-cols-1'));
+    assert.ok(html.includes('sm:grid-cols-12'));
+    assert.ok(!html.includes('lg:grid-cols'));
+  });
+
   it('classic theme also uses responsive grid', () => {
     const html = renderComponent({ type: 'row', props: { cols: 3 }, children: [] }, 'classic');
     assert.ok(html.includes('grid-cols-1'));
@@ -579,5 +586,23 @@ describe('mobile responsive - CSS media queries', () => {
   it('viewport meta tag is present', () => {
     const html = renderPage({ title: 'Test', components: [] });
     assert.ok(html.includes('width=device-width, initial-scale=1.0'));
+  });
+
+  it('anthropic theme forces col-span to full width on mobile', () => {
+    const html = renderPage({
+      title: 'Test',
+      style: 'anthropic',
+      components: [{ type: 'header', props: { title: 'Hi' } }],
+    });
+    assert.ok(html.includes('[class*="col-span-"]{grid-column:1/-1}'));
+  });
+
+  it('classic theme forces col-span to full width on mobile', () => {
+    const html = renderPage({
+      title: 'Test',
+      style: 'classic',
+      components: [{ type: 'header', props: { title: 'Hi' } }],
+    });
+    assert.ok(html.includes('[class*="col-span-"]{grid-column:1/-1}'));
   });
 });
