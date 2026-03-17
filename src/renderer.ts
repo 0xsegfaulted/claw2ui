@@ -78,10 +78,10 @@ export function renderPage(spec: PageSpec): string {
 }
 
 /**
- * Render raw HTML into a full page with the default theme styling.
+ * Render raw HTML into a full page with theme styling.
  */
-export function renderRawPage(html: string, title: string = 'Claw2UI'): string {
-  const theme = getTheme(DEFAULT_THEME);
+export function renderRawPage(html: string, title: string = 'Claw2UI', style?: string): string {
+  const theme = getTheme(style);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

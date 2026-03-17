@@ -295,16 +295,17 @@ app.post('/api/tokens/:token/revoke', requireAdminAuth, (req: Request, res: Resp
 
 app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
   try {
-    let { html, spec, title, ttl, components, theme, deliver } = req.body;
+    let { html, spec, title, ttl, components, theme, style, deliver } = req.body;
 
     if (!spec && !html && components) {
-      spec = { title: title || req.body.title, theme, components };
+      spec = { title: title || req.body.title, theme, style, components };
     }
 
     let finalHtml: string;
     let pageTitle: string = title;
 
     if (spec) {
+      if (style && !spec.style) spec.style = style;
       pageTitle = pageTitle || spec.title || 'Untitled';
       finalHtml = renderPage(spec as PageSpec);
     } else if (html) {
@@ -312,7 +313,7 @@ app.post('/api/pages', requireAuth, async (req: Request, res: Response) => {
       if (html.trim().toLowerCase().startsWith('<!doctype') || html.trim().toLowerCase().startsWith('<html')) {
         finalHtml = html;
       } else {
-        finalHtml = renderRawPage(html, pageTitle);
+        finalHtml = renderRawPage(html, pageTitle, style);
       }
     } else {
       res.status(400).json({ error: 'Either "html" or "spec" is required' });
