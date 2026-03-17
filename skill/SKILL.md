@@ -128,6 +128,10 @@ claw2ui init --server <url> --token <t> # Manual remote server config
 claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
 claw2ui publish --html "<h1>Hello</h1>" --title "Test"
 claw2ui publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
+claw2ui publish --spec-file /tmp/page.json --style classic --title "Report" # With theme
+
+# Themes
+claw2ui themes                          # List available themes
 
 # Manage pages (admin/privileged only)
 claw2ui list                            # List all pages
@@ -165,6 +169,7 @@ Write the spec to a temp file. Always wrap content in a `container`.
 cat > /tmp/claw2ui_page.json << 'SPECEOF'
 {
   "title": "Page Title",
+  "style": "anthropic",
   "components": [
     { "type": "container", "children": [
       { "type": "header", "props": { "title": "Title", "subtitle": "Description" } },
@@ -174,6 +179,15 @@ cat > /tmp/claw2ui_page.json << 'SPECEOF'
 }
 SPECEOF
 ```
+
+#### Available Themes (`style` field)
+
+| Theme | Description |
+|-------|-------------|
+| `anthropic` | **(default)** Warm editorial aesthetic — Newsreader serif headings, terracotta accents, cream backgrounds |
+| `classic` | Original Tailwind look — blue accents, system fonts, gray surfaces |
+
+Omit `style` to use the default (`anthropic`). Use `claw2ui themes` to list all available themes at runtime.
 
 ### Step 3: Confirm with User
 
