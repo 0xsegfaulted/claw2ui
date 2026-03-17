@@ -568,47 +568,86 @@ describe('mobile responsive - classic theme mobile classes', () => {
   });
 });
 
-describe('mobile responsive - CSS media queries', () => {
-  it('anthropic theme includes mobile media query', () => {
+describe('mobile responsive - fluid sizing with clamp()', () => {
+  it('anthropic theme uses clamp() for stat sizing', () => {
     const html = renderPage({
-      title: 'Mobile Test',
+      title: 'Fluid Test',
+      style: 'anthropic',
+      components: [{ type: 'stat', props: { label: 'X', value: '1' } }],
+    });
+    assert.ok(html.includes('clamp('));
+    assert.ok(html.includes('.c2u-stat-value'));
+    assert.ok(html.includes('.c2u-stat-icon'));
+  });
+
+  it('anthropic theme uses clamp() for header title', () => {
+    const html = renderPage({
+      title: 'Fluid Test',
+      style: 'anthropic',
+      components: [{ type: 'header', props: { title: 'Hi' } }],
+    });
+    assert.ok(html.includes('.c2u-header-title{'));
+    assert.ok(html.includes('clamp(1.5rem'));
+  });
+
+  it('classic theme uses clamp() for fluid sizing', () => {
+    const html = renderPage({
+      title: 'Fluid Test',
+      style: 'classic',
+      components: [{ type: 'header', props: { title: 'Hi' } }],
+    });
+    assert.ok(html.includes('clamp('));
+    assert.ok(html.includes('.c2u-classic-stat'));
+  });
+});
+
+describe('mobile responsive - structural media queries', () => {
+  it('anthropic theme keeps col-span override in media query', () => {
+    const html = renderPage({
+      title: 'Test',
       style: 'anthropic',
       components: [{ type: 'header', props: { title: 'Hi' } }],
     });
     assert.ok(html.includes('@media(max-width:640px)'));
+    assert.ok(html.includes('[class*="col-span-"]{grid-column:1/-1}'));
     assert.ok(html.includes('max-height:220px'));
   });
 
-  it('classic theme includes mobile media query', () => {
+  it('classic theme keeps col-span override in media query', () => {
     const html = renderPage({
-      title: 'Mobile Test',
+      title: 'Test',
       style: 'classic',
       components: [{ type: 'header', props: { title: 'Hi' } }],
     });
     assert.ok(html.includes('@media(max-width:640px)'));
-    assert.ok(html.includes('max-height:220px'));
+    assert.ok(html.includes('[class*="col-span-"]{grid-column:1/-1}'));
   });
 
   it('viewport meta tag is present', () => {
     const html = renderPage({ title: 'Test', components: [] });
     assert.ok(html.includes('width=device-width, initial-scale=1.0'));
   });
+});
 
-  it('anthropic theme forces col-span to full width on mobile', () => {
+describe('mobile responsive - stat icon constrained', () => {
+  it('anthropic stat icon has flex-shrink and max-width', () => {
     const html = renderPage({
       title: 'Test',
       style: 'anthropic',
-      components: [{ type: 'header', props: { title: 'Hi' } }],
+      components: [{ type: 'stat', props: { label: 'X', value: '1', icon: 'chat' } }],
     });
-    assert.ok(html.includes('[class*="col-span-"]{grid-column:1/-1}'));
+    assert.ok(html.includes('flex-shrink:0'));
+    assert.ok(html.includes('max-width:clamp('));
+    assert.ok(html.includes('text-overflow:ellipsis'));
   });
 
-  it('classic theme forces col-span to full width on mobile', () => {
+  it('classic stat icon has fluid sizing via CSS', () => {
     const html = renderPage({
       title: 'Test',
       style: 'classic',
-      components: [{ type: 'header', props: { title: 'Hi' } }],
+      components: [{ type: 'stat', props: { label: 'X', value: '1', icon: 'chat' } }],
     });
-    assert.ok(html.includes('[class*="col-span-"]{grid-column:1/-1}'));
+    assert.ok(html.includes('.c2u-classic-stat .text-3xl'));
+    assert.ok(html.includes('flex-shrink:0'));
   });
 });

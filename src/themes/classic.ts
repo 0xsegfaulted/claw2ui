@@ -30,22 +30,21 @@ const theme: Theme = {
       .dark ::-webkit-scrollbar-thumb { background: #475569; }
       .c2u-classic-tabs-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
       .c2u-classic-tabs-nav::-webkit-scrollbar{display:none}
-      .c2u-classic-tabs-nav button{white-space:nowrap;flex-shrink:0}
+      .c2u-classic-tabs-nav button{white-space:nowrap;flex-shrink:0;padding:clamp(0.5rem,1.5vw,0.75rem) clamp(0.625rem,2vw,1rem);font-size:clamp(0.8rem,1.5vw,0.875rem)}
+      .c2u-classic-stat{padding:clamp(0.875rem,3vw,1.25rem)}
+      .c2u-classic-stat .text-2xl{font-size:clamp(1.25rem,3vw + 0.25rem,1.5rem)}
+      .c2u-classic-stat .text-3xl{font-size:clamp(1.25rem,2.5vw + 0.5rem,1.875rem);flex-shrink:0;max-width:clamp(2rem,8vw,3.5rem);overflow:hidden;text-overflow:ellipsis;line-height:1}
+      .c2u-classic-card-header{padding:clamp(0.625rem,2vw,1rem) clamp(0.875rem,2.5vw,1.25rem)}
+      .c2u-classic-card-body{padding:clamp(0.625rem,2vw,1rem) clamp(0.875rem,2.5vw,1.25rem)}
+      .c2u-classic-header h1{font-size:clamp(1.35rem,4vw + 0.25rem,1.5rem)}
+      .c2u-classic-table th{padding:clamp(0.4rem,1.2vw,0.75rem) clamp(0.5rem,1.5vw,1rem);font-size:clamp(0.65rem,1.2vw,0.75rem)}
+      .c2u-classic-table td{padding:clamp(0.4rem,1.2vw,0.75rem) clamp(0.5rem,1.5vw,1rem);font-size:clamp(0.78rem,1.5vw,0.875rem)}
+      .c2u-classic-code{padding:clamp(0.625rem,2vw,1rem);font-size:clamp(0.78rem,1.2vw,0.875rem)}
+      .c2u-classic-modal{padding:clamp(1rem,3vw,1.5rem);max-width:min(32rem,calc(100vw - 2rem))}
+      .c2u-classic-accordion-btn{padding:clamp(0.5rem,1.5vw,0.75rem) clamp(0.625rem,1.8vw,1rem);font-size:clamp(0.82rem,1.5vw,0.9375rem)}
       @media(max-width:640px){
         [class*="col-span-"]{grid-column:1/-1}
-        .c2u-classic-stat{padding:1rem!important}
-        .c2u-classic-stat .text-2xl{font-size:1.35rem!important}
-        .c2u-classic-stat .text-sm{font-size:0.75rem!important}
-        .c2u-classic-card-header{padding:0.75rem 1rem!important}
-        .c2u-classic-card-body{padding:0.75rem 1rem!important}
-        .c2u-classic-header h1{font-size:1.5rem!important}
-        .c2u-classic-table th{padding:0.5rem 0.75rem!important;font-size:0.65rem!important}
-        .c2u-classic-table td{padding:0.5rem 0.75rem!important;font-size:0.8rem!important}
         .c2u-classic-chart{max-height:220px}
-        .c2u-classic-code{padding:0.75rem 1rem!important;font-size:0.8rem!important}
-        .c2u-classic-modal{padding:1.25rem!important;margin:0.5rem;max-width:calc(100vw - 2rem)!important}
-        .c2u-classic-accordion-btn{padding:0.625rem 0.75rem!important;font-size:0.85rem!important}
-        .c2u-classic-tabs-nav button{padding:0.5rem 0.625rem!important;font-size:0.8rem!important}
       }
     `;
   },
