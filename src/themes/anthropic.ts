@@ -9,7 +9,7 @@ import type { Theme } from './types';
 import type { Component, ColumnDef } from '../types';
 import {
   esc, escJs, escJsonInScript, sanitizeHtml,
-  VALID_CHART_TYPES, iconName, normalizeDateValue,
+  VALID_CHART_TYPES, iconName, normalizeDateValue, responsiveGridCols,
 } from '../render-utils';
 
 const theme: Theme = {
@@ -185,8 +185,9 @@ function getDesignCSS(): string {
     .c2u-input::placeholder{color:var(--c2u-text-secondary)}
     .c2u-label{display:block;font-size:0.8rem;font-weight:600;color:var(--c2u-text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em}
 
-    .c2u-tabs-nav{display:flex;gap:0;border-bottom:1px solid var(--c2u-border);margin-bottom:24px}
-    .c2u-tab-btn{padding:12px 20px;font-size:0.875rem;font-weight:500;color:var(--c2u-text-secondary);background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;transition:all var(--c2u-transition)}
+    .c2u-tabs-nav{display:flex;gap:0;border-bottom:1px solid var(--c2u-border);margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .c2u-tabs-nav::-webkit-scrollbar{display:none}
+    .c2u-tab-btn{padding:12px 20px;font-size:0.875rem;font-weight:500;color:var(--c2u-text-secondary);background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;transition:all var(--c2u-transition);white-space:nowrap;flex-shrink:0}
     .c2u-tab-btn:hover{color:var(--c2u-text)}
     .c2u-tab-active{color:var(--c2u-primary)!important;border-bottom-color:var(--c2u-primary)!important}
 
@@ -252,10 +253,22 @@ function getDesignCSS(): string {
 
     @media(max-width:640px){
       .c2u-header-title{font-size:1.65rem}
+      .c2u-header{margin-bottom:20px}
       .c2u-stat-value{font-size:1.35rem}
-      .c2u-stat{padding:18px}
-      .c2u-card-header{padding:16px 18px 12px}
-      .c2u-card-body{padding:16px 18px}
+      .c2u-stat{padding:16px}
+      .c2u-stat::before{left:16px}
+      .c2u-stat-label{font-size:0.75rem}
+      .c2u-card-header{padding:14px 16px 10px}
+      .c2u-card-body{padding:14px 16px}
+      .c2u-table th{padding:10px 12px;font-size:0.65rem}
+      .c2u-table td{padding:10px 12px;font-size:0.8rem}
+      .c2u-tab-btn{padding:10px 14px;font-size:0.8rem}
+      .c2u-chart-wrap{max-height:220px}
+      .c2u-accordion-trigger{padding:12px 14px;font-size:0.85rem}
+      .c2u-accordion-body{padding:0 14px 12px}
+      .c2u-code{padding:14px 16px;font-size:0.8rem}
+      .c2u-modal-panel{padding:20px;margin:8px;max-width:calc(100vw - 32px)}
+      .c2u-footer{padding:24px 16px}
     }
   `;
 }
@@ -275,7 +288,7 @@ function renderComponent(comp: Component): string {
       return `<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 c2u-stagger">${children}</div>`;
 
     case 'row':
-      return `<div class="grid grid-cols-${p.cols || 12} gap-${p.gap || 4} mb-6 c2u-stagger">${children}</div>`;
+      return `<div class="grid ${responsiveGridCols(p.cols || 12)} gap-${p.gap || 4} mb-6 c2u-stagger">${children}</div>`;
 
     case 'column':
       return `<div class="col-span-${p.span || 1}">${children}</div>`;

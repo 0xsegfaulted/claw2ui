@@ -8,7 +8,7 @@ import type { Theme } from './types';
 import type { Component, ColumnDef } from '../types';
 import {
   esc, escJs, escJsonInScript, sanitizeHtml,
-  VALID_CHART_TYPES, iconName, normalizeDateValue,
+  VALID_CHART_TYPES, iconName, normalizeDateValue, responsiveGridCols,
 } from '../render-utils';
 
 const theme: Theme = {
@@ -20,6 +20,7 @@ const theme: Theme = {
 
   getDesignCSS() {
     return `
+      *,*::before,*::after{box-sizing:border-box}
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; min-height: 100vh; margin: 0; }
       .dark body { background-color: #111827; }
       [x-cloak] { display: none !important; }
@@ -27,6 +28,24 @@ const theme: Theme = {
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
       .dark ::-webkit-scrollbar-thumb { background: #475569; }
+      .c2u-classic-tabs-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+      .c2u-classic-tabs-nav::-webkit-scrollbar{display:none}
+      .c2u-classic-tabs-nav button{white-space:nowrap;flex-shrink:0}
+      @media(max-width:640px){
+        .c2u-classic-stat{padding:1rem!important}
+        .c2u-classic-stat .text-2xl{font-size:1.35rem!important}
+        .c2u-classic-stat .text-sm{font-size:0.75rem!important}
+        .c2u-classic-card-header{padding:0.75rem 1rem!important}
+        .c2u-classic-card-body{padding:0.75rem 1rem!important}
+        .c2u-classic-header h1{font-size:1.5rem!important}
+        .c2u-classic-table th{padding:0.5rem 0.75rem!important;font-size:0.65rem!important}
+        .c2u-classic-table td{padding:0.5rem 0.75rem!important;font-size:0.8rem!important}
+        .c2u-classic-chart{max-height:220px}
+        .c2u-classic-code{padding:0.75rem 1rem!important;font-size:0.8rem!important}
+        .c2u-classic-modal{padding:1.25rem!important;margin:0.5rem;max-width:calc(100vw - 2rem)!important}
+        .c2u-classic-accordion-btn{padding:0.625rem 0.75rem!important;font-size:0.85rem!important}
+        .c2u-classic-tabs-nav button{padding:0.5rem 0.625rem!important;font-size:0.8rem!important}
+      }
     `;
   },
 
@@ -65,7 +84,7 @@ function renderComponent(comp: Component): string {
       return `<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">${children}</div>`;
 
     case 'row':
-      return `<div class="grid grid-cols-${p.cols || 12} gap-${p.gap || 4} mb-4">${children}</div>`;
+      return `<div class="grid ${responsiveGridCols(p.cols || 12)} gap-${p.gap || 4} mb-4">${children}</div>`;
 
     case 'column':
       return `<div class="col-span-${p.span || 1}">${children}</div>`;
@@ -73,11 +92,11 @@ function renderComponent(comp: Component): string {
     case 'card':
       return `
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${p.class || ''}">
-          ${p.title ? `<div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          ${p.title ? `<div class="c2u-classic-card-header px-5 py-4 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${esc(p.title)}</h3>
             ${p.subtitle ? `<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">${esc(p.subtitle)}</p>` : ''}
           </div>` : ''}
-          <div class="p-5">${children}</div>
+          <div class="c2u-classic-card-body p-5">${children}</div>
         </div>`;
 
     case 'tabs': {
@@ -85,7 +104,7 @@ function renderComponent(comp: Component): string {
       return `
         <div x-data="{ activeTab: '${escJs(tabs[0]?.id || '')}' }">
           <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
-            <nav class="flex space-x-4">
+            <nav class="c2u-classic-tabs-nav flex space-x-4">
               ${tabs.map(tab => `
                 <button @click="activeTab = '${escJs(tab.id)}'"
                   :class="activeTab === '${escJs(tab.id)}' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
@@ -107,7 +126,7 @@ function renderComponent(comp: Component): string {
         <div class="space-y-2">
           ${items.map((item, i) => `
             <div x-data="{ open: ${i === 0 ? 'true' : 'false'} }" class="border border-gray-200 dark:border-gray-700 rounded-lg">
-              <button @click="open = !open" class="w-full px-4 py-3 flex justify-between items-center text-left">
+              <button @click="open = !open" class="c2u-classic-accordion-btn w-full px-4 py-3 flex justify-between items-center text-left">
                 <span class="font-medium text-gray-900 dark:text-white">${esc(item.title)}</span>
                 <svg :class="open ? 'rotate-180' : ''" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -123,7 +142,7 @@ function renderComponent(comp: Component): string {
 
     case 'stat':
       return `
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <div class="c2u-classic-stat bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-500 dark:text-gray-400">${esc(p.label || '')}</p>
@@ -147,7 +166,7 @@ function renderComponent(comp: Component): string {
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
           </div>` : ''}
           <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table class="c2u-classic-table min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead class="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   ${columns.map(col => `
@@ -188,7 +207,7 @@ function renderComponent(comp: Component): string {
       }));
       const height = parseInt(String(p.height), 10) || 300;
       return `
-        <div style="height: ${height}px; position: relative;">
+        <div class="c2u-classic-chart" style="height: ${height}px; position: relative;">
           <canvas id="${chartId}"></canvas>
         </div>
         <script>
@@ -239,7 +258,7 @@ function renderComponent(comp: Component): string {
       return `<div class="prose dark:prose-invert max-w-none">${sanitizeHtml(p.content || '')}</div>`;
 
     case 'code':
-      return `<pre class="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm"><code class="language-${p.language || 'text'}">${esc(p.content || '')}</code></pre>`;
+      return `<pre class="c2u-classic-code bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm"><code class="language-${p.language || 'text'}">${esc(p.content || '')}</code></pre>`;
 
     case 'html':
       return sanitizeHtml(p.content || '');
@@ -255,7 +274,7 @@ function renderComponent(comp: Component): string {
 
     case 'header':
       return `
-        <div class="mb-6">
+        <div class="c2u-classic-header mb-6">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">${esc(p.title || '')}</h1>
           ${p.subtitle ? `<p class="text-gray-500 dark:text-gray-400 mt-1">${esc(p.subtitle)}</p>` : ''}
         </div>`;
@@ -298,7 +317,7 @@ function renderComponent(comp: Component): string {
           <template x-teleport="body">
             <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
               <div class="fixed inset-0 bg-black/50" @click="open = false"></div>
-              <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 z-10" @click.stop>
+              <div class="c2u-classic-modal relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 z-10" @click.stop>
                 <button @click="open = false" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
                 ${p.title ? `<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">${esc(p.title)}</h3>` : ''}
                 ${contentChildren || '<p class="text-gray-500">Modal content</p>'}

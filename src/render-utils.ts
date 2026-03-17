@@ -104,3 +104,18 @@ export function normalizeDateValue(val: string | undefined, inputType: string): 
  * Theme authors can override this, but this provides sensible defaults.
  */
 export type FormatCellFn = (value: any, col: ColumnDef) => string;
+
+/* ------------------------------------------------------------------ */
+/*  Layout Helpers                                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Generate responsive Tailwind grid classes for a given column count.
+ * Stacks to 1 column on mobile, 2 on tablet, full count on desktop.
+ */
+export function responsiveGridCols(cols: number): string {
+  if (!cols || cols <= 1) return 'grid-cols-1';
+  if (cols === 2) return 'grid-cols-1 sm:grid-cols-2';
+  if (cols <= 4) return `grid-cols-1 sm:grid-cols-2 lg:grid-cols-${cols}`;
+  return `grid-cols-2 sm:grid-cols-3 lg:grid-cols-${cols}`;
+}

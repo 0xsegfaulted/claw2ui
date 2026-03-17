@@ -90,13 +90,15 @@ describe('renderComponent', () => {
     assert.ok(html.includes("type:'bar'"));
   });
 
-  it('renders row with cols', () => {
+  it('renders row with responsive cols', () => {
     const html = renderComponent({
       type: 'row',
       props: { cols: 3, gap: 4 },
       children: [],
     });
-    assert.ok(html.includes('grid-cols-3'));
+    assert.ok(html.includes('grid-cols-1'));
+    assert.ok(html.includes('sm:grid-cols-2'));
+    assert.ok(html.includes('lg:grid-cols-3'));
     assert.ok(html.includes('gap-4'));
   });
 
@@ -478,5 +480,104 @@ describe('XSS prevention - html component (sanitizeHtml)', () => {
     });
     assert.ok(!html.includes('onerror'));
     assert.ok(!html.includes('onclick'));
+  });
+});
+
+// === Mobile Responsiveness Tests ===
+
+describe('mobile responsive - row grid', () => {
+  it('uses responsive breakpoints for cols=2', () => {
+    const html = renderComponent({ type: 'row', props: { cols: 2 }, children: [] });
+    assert.ok(html.includes('grid-cols-1'));
+    assert.ok(html.includes('sm:grid-cols-2'));
+    assert.ok(!html.includes('lg:grid-cols'));
+  });
+
+  it('uses responsive breakpoints for cols=4', () => {
+    const html = renderComponent({ type: 'row', props: { cols: 4 }, children: [] });
+    assert.ok(html.includes('grid-cols-1'));
+    assert.ok(html.includes('sm:grid-cols-2'));
+    assert.ok(html.includes('lg:grid-cols-4'));
+  });
+
+  it('uses responsive breakpoints for cols=1', () => {
+    const html = renderComponent({ type: 'row', props: { cols: 1 }, children: [] });
+    assert.ok(html.includes('grid-cols-1'));
+    assert.ok(!html.includes('sm:grid-cols'));
+  });
+
+  it('classic theme also uses responsive grid', () => {
+    const html = renderComponent({ type: 'row', props: { cols: 3 }, children: [] }, 'classic');
+    assert.ok(html.includes('grid-cols-1'));
+    assert.ok(html.includes('sm:grid-cols-2'));
+    assert.ok(html.includes('lg:grid-cols-3'));
+  });
+});
+
+describe('mobile responsive - tabs scrollable', () => {
+  it('anthropic tabs nav has scrollable class', () => {
+    const html = renderComponent({
+      type: 'tabs',
+      props: { tabs: [{ id: 't1', label: 'Tab 1', children: [] }] },
+    });
+    assert.ok(html.includes('c2u-tabs-nav'));
+  });
+
+  it('classic tabs nav has scrollable class', () => {
+    const html = renderComponent({
+      type: 'tabs',
+      props: { tabs: [{ id: 't1', label: 'Tab 1', children: [] }] },
+    }, 'classic');
+    assert.ok(html.includes('c2u-classic-tabs-nav'));
+  });
+});
+
+describe('mobile responsive - classic theme mobile classes', () => {
+  it('classic stat has mobile hook class', () => {
+    const html = renderComponent({ type: 'stat', props: { label: 'X', value: '1' } }, 'classic');
+    assert.ok(html.includes('c2u-classic-stat'));
+  });
+
+  it('classic card has mobile hook classes', () => {
+    const html = renderComponent({ type: 'card', props: { title: 'T' }, children: [] }, 'classic');
+    assert.ok(html.includes('c2u-classic-card-header'));
+    assert.ok(html.includes('c2u-classic-card-body'));
+  });
+
+  it('classic header has mobile hook class', () => {
+    const html = renderComponent({ type: 'header', props: { title: 'T' } }, 'classic');
+    assert.ok(html.includes('c2u-classic-header'));
+  });
+
+  it('classic chart has mobile hook class', () => {
+    const html = renderComponent({ type: 'chart', props: { chartType: 'bar', data: {} } }, 'classic');
+    assert.ok(html.includes('c2u-classic-chart'));
+  });
+});
+
+describe('mobile responsive - CSS media queries', () => {
+  it('anthropic theme includes mobile media query', () => {
+    const html = renderPage({
+      title: 'Mobile Test',
+      style: 'anthropic',
+      components: [{ type: 'header', props: { title: 'Hi' } }],
+    });
+    assert.ok(html.includes('@media(max-width:640px)'));
+    assert.ok(html.includes('max-height:220px'));
+  });
+
+  it('classic theme includes mobile media query', () => {
+    const html = renderPage({
+      title: 'Mobile Test',
+      style: 'classic',
+      components: [{ type: 'header', props: { title: 'Hi' } }],
+    });
+    assert.ok(html.includes('@media(max-width:640px)'));
+    assert.ok(html.includes('max-height:220px'));
+  });
+
+  it('viewport meta tag is present', () => {
+    const html = renderPage({ title: 'Test', components: [] });
+    assert.ok(html.includes('width=device-width, initial-scale=1.0'));
   });
 });
