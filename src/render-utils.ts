@@ -5,7 +5,11 @@
  * sanitization) and data formatting helpers. Theme authors should
  * import from here rather than re-implementing.
  */
+import { marked } from 'marked';
 import type { ColumnDef } from './types';
+
+// Configure marked for safe, synchronous rendering
+marked.setOptions({ async: false, gfm: true, breaks: true });
 
 /* ------------------------------------------------------------------ */
 /*  Escaping                                                           */
@@ -65,10 +69,36 @@ export function sanitizeHtml(html: string): string {
     .replace(/<\/?style\b[^>]*>/gi, '')
     // Strip event handlers
     .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    // Strip javascript: URLs (quoted and unquoted)
-    .replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]*)/gi, 'href="#"')
-    .replace(/src\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]*)/gi, 'src=""')
+    // Strip javascript: URLs — decode HTML entities first to catch &#58; / &#x3a; / &colon; variants
+    .replace(/(href\s*=\s*)(["'])([\s\S]*?)\2/gi, (m, attr, q, val) => {
+      const decoded = val.replace(/&#x([0-9a-f]+);/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
+        .replace(/&colon;/gi, ':');
+      return /^\s*javascript\s*:/i.test(decoded) ? `${attr}${q}#${q}` : m;
+    })
+    .replace(/href\s*=\s*javascript:[^\s>]*/gi, 'href="#"')
+    .replace(/(src\s*=\s*)(["'])([\s\S]*?)\2/gi, (m, attr, q, val) => {
+      const decoded = val.replace(/&#x([0-9a-f]+);/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
+        .replace(/&colon;/gi, ':');
+      return /^\s*javascript\s*:/i.test(decoded) ? `${attr}${q}${q}` : m;
+    })
+    .replace(/src\s*=\s*javascript:[^\s>]*/gi, 'src=""')
     .replace(/srcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+}
+
+/* ------------------------------------------------------------------ */
+/*  Markdown                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Parse markdown content to HTML, then sanitize the output.
+ * Pipeline: markdown syntax → marked → sanitizeHtml → safe HTML
+ */
+export function parseMarkdown(md: string): string {
+  if (typeof md !== 'string') return '';
+  const html = marked.parse(md) as string;
+  return sanitizeHtml(html);
 }
 
 /* ------------------------------------------------------------------ */

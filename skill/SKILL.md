@@ -193,6 +193,7 @@ claw2ui status                          # Check server status
 - `date-time-input` - Date/time picker. Props: `label`, `value` (ISO 8601), `enableDate`, `enableTime`, `min`, `max`
 
 ### Media & Text
+- `markdown` - Rich text with standard markdown syntax (headings, bold, lists, links, code blocks, etc.). Props: `content` (markdown string). Preferred for rich text content.
 - `icon` - Material Icon. Props: `name` (e.g. "settings", "search"), `size` (px)
 - `text` - Text paragraph. Props: `content`, `size` (`"sm"`, `"base"`, `"lg"`, `"xl"`), `bold` (boolean)
 - `code` - Code block. Props: `content`, `language`

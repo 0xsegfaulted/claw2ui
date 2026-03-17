@@ -112,6 +112,7 @@ The API response includes `formats` with platform-specific summaries (e.g. `form
 - `date-time-input` - Date/time picker. Props: `label`, `value` (ISO 8601), `enableDate`, `enableTime`, `min`, `max`
 
 **Media:**
+- `markdown` - Rich text with standard markdown syntax. Props: `content` (markdown string). Preferred for rich text content.
 - `icon` - Material Icon. Props: `name` (e.g. "settings", "search", "delete"), `size` (px)
 - `text` - Props: `content`, `size`, `bold`
 - `code` - Props: `content`, `language`

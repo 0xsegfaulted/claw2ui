@@ -10,7 +10,7 @@ import type { Component, ColumnDef } from '../types';
 import { ComponentRegistry } from '../components/registry';
 import type { ComponentRenderFn } from '../components/registry';
 import {
-  esc, escJs, escJsonInScript, sanitizeHtml,
+  esc, escJs, escJsonInScript, sanitizeHtml, parseMarkdown,
   VALID_CHART_TYPES, iconName, normalizeDateValue, responsiveGridCols,
 } from '../render-utils';
 
@@ -101,7 +101,7 @@ const renderStat: ComponentRenderFn = (comp) => {
             ${Number(p.change) >= 0 ? '\u2191' : '\u2193'} ${esc(String(Math.abs(Number(p.change))))}%
           </div>` : ''}
         </div>
-        ${p.icon ? `<div class="c2u-stat-icon">${esc(String(p.icon))}</div>` : ''}
+        ${p.icon ? `<div class="c2u-stat-icon">${/^[\w_]+$/.test(String(p.icon)) ? `<span class="material-icons">${esc(String(iconName(p.icon)))}</span>` : esc(String(p.icon))}</div>` : ''}
       </div>
     </div>`;
 };
@@ -204,7 +204,7 @@ const renderImage: ComponentRenderFn = (comp) => {
 
 const renderMarkdown: ComponentRenderFn = (comp) => {
   const p = comp.props || {};
-  return `<div class="c2u-prose max-w-none">${sanitizeHtml(p.content || '')}</div>`;
+  return `<div class="c2u-prose max-w-none">${parseMarkdown(p.content || '')}</div>`;
 };
 
 const renderCode: ComponentRenderFn = (comp) => {
