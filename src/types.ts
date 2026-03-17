@@ -9,6 +9,8 @@ export interface Component {
 export interface PageSpec {
   title?: string;
   theme?: 'light' | 'dark' | 'auto';
+  /** Visual style / theme name. See src/themes/ for available themes. */
+  style?: string;
   components: Component[];
 }
 

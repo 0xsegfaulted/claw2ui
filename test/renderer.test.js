@@ -31,7 +31,7 @@ describe('renderComponent', () => {
     });
     assert.ok(html.includes('Revenue'));
     assert.ok(html.includes('$1M'));
-    assert.ok(html.includes('text-green-600'));
+    assert.ok(html.includes('c2u-up'));
     assert.ok(html.includes('10.5'));
     assert.ok(html.includes('💰'));
   });
@@ -41,7 +41,7 @@ describe('renderComponent', () => {
       type: 'stat',
       props: { label: 'Users', value: '500', change: -3.2 },
     });
-    assert.ok(html.includes('text-red-600'));
+    assert.ok(html.includes('c2u-down'));
     assert.ok(html.includes('3.2'));
   });
 
@@ -74,7 +74,7 @@ describe('renderComponent', () => {
         rows: [{ status: 'Active' }],
       },
     });
-    assert.ok(html.includes('bg-green-100'));
+    assert.ok(html.includes('c2u-badge-success'));
     assert.ok(html.includes('Active'));
   });
 
@@ -87,7 +87,7 @@ describe('renderComponent', () => {
       },
     });
     assert.ok(html.includes('<canvas'));
-    assert.ok(html.includes("type: 'bar'"));
+    assert.ok(html.includes("type:'bar'"));
   });
 
   it('renders row with cols', () => {
@@ -102,11 +102,11 @@ describe('renderComponent', () => {
 
   it('renders button variants', () => {
     const primary = renderComponent({ type: 'button', props: { label: 'Go', variant: 'primary' } });
-    assert.ok(primary.includes('bg-blue-600'));
+    assert.ok(primary.includes('c2u-btn-primary'));
     assert.ok(primary.includes('Go'));
 
     const danger = renderComponent({ type: 'button', props: { label: 'Delete', variant: 'danger' } });
-    assert.ok(danger.includes('bg-red-600'));
+    assert.ok(danger.includes('c2u-btn-danger'));
   });
 
   it('renders text-field', () => {
@@ -187,6 +187,35 @@ describe('renderComponent', () => {
   });
 });
 
+describe('renderComponent with classic theme', () => {
+  it('renders stat with classic color classes', () => {
+    const html = renderComponent(
+      { type: 'stat', props: { label: 'Revenue', value: '$1M', change: 10.5 } },
+      'classic'
+    );
+    assert.ok(html.includes('text-green-600'));
+  });
+
+  it('renders button with classic color classes', () => {
+    const html = renderComponent(
+      { type: 'button', props: { label: 'Go' } },
+      'classic'
+    );
+    assert.ok(html.includes('bg-blue-600'));
+  });
+
+  it('renders badge with classic color classes', () => {
+    const html = renderComponent({
+      type: 'table',
+      props: {
+        columns: [{ key: 'status', format: 'badge', badgeMap: { Active: 'success' } }],
+        rows: [{ status: 'Active' }],
+      },
+    }, 'classic');
+    assert.ok(html.includes('bg-green-100'));
+  });
+});
+
 describe('renderPage', () => {
   it('produces full HTML document', () => {
     const html = renderPage({
@@ -204,6 +233,17 @@ describe('renderPage', () => {
     assert.ok(html.includes('chart.js'));
     assert.ok(html.includes('Hello'));
     assert.ok(html.includes('Powered by Claw2UI'));
+  });
+
+  it('uses specified style/theme', () => {
+    const html = renderPage({
+      title: 'Classic',
+      style: 'classic',
+      components: [{ type: 'header', props: { title: 'Hi' } }],
+    });
+    // Classic theme uses system fonts, not Newsreader
+    assert.ok(!html.includes('Newsreader'));
+    assert.ok(html.includes('Hi'));
   });
 
   it('generates og:title meta tag', () => {
@@ -247,7 +287,7 @@ describe('XSS prevention - chart', () => {
       type: 'chart',
       props: { chartType: "bar';alert(1);//", data: { labels: ['A'], datasets: [{ data: [1] }] } },
     });
-    assert.ok(html.includes("type: 'line'"));
+    assert.ok(html.includes("type:'line'"));
     assert.ok(!html.includes("bar';alert(1)"));
   });
 
@@ -257,7 +297,7 @@ describe('XSS prevention - chart', () => {
         type: 'chart',
         props: { chartType: ct, data: { labels: ['A'], datasets: [{ data: [1] }] } },
       });
-      assert.ok(html.includes(`type: '${ct}'`), `chartType ${ct} should be accepted`);
+      assert.ok(html.includes(`type:'${ct}'`), `chartType ${ct} should be accepted`);
     }
   });
 
@@ -278,7 +318,7 @@ describe('XSS prevention - chart', () => {
       type: 'chart',
       props: { chartType: 'bar', height: '300px;background:red', data: {} },
     });
-    assert.ok(html.includes('height: 300px'));
+    assert.ok(html.includes('height:300px'));
     assert.ok(!html.includes('background:red'));
   });
 });
