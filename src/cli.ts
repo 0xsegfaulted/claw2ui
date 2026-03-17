@@ -104,7 +104,7 @@ Publish options:
   --html <html>        Raw HTML content
   --file <path>        Read HTML from file
   --spec <json>        A2UI component spec (JSON string)
-  --spec-file <path>   Read spec from JSON file
+  --spec-file <path>   Read spec from file (.json or .ts DSL)
   --title <title>      Page title
   --ttl <ms>           Time-to-live in milliseconds (0 = forever)
   --style <theme>      Rendering theme (e.g. "anthropic", "classic")
@@ -122,6 +122,7 @@ Token subcommands:
   token revoke <token> Remove a config token
 
 Examples:
+  claw2ui publish --spec-file dashboard.ts --title "Dashboard"
   claw2ui publish --spec-file spec.json --title "Dashboard"
   claw2ui publish --html "<h1>Hello</h1>" --title "Test"
   claw2ui publish --spec-file spec.json --style classic --title "Report"
@@ -155,8 +156,12 @@ Examples:
           body.spec = JSON.parse(spec);
           if (style) body.spec.style = style;
         } else if (specFile) {
-          const content = fs.readFileSync(path.resolve(specFile), 'utf-8');
-          body.spec = JSON.parse(content);
+          if (specFile.endsWith('.ts')) {
+            const { runDslFile } = require('./dsl/runner');
+            body.spec = runDslFile(path.resolve(specFile));
+          } else {
+            body.spec = JSON.parse(fs.readFileSync(path.resolve(specFile), 'utf-8'));
+          }
           if (style) body.spec.style = style;
         } else if (file) {
           body.html = fs.readFileSync(path.resolve(file), 'utf-8');

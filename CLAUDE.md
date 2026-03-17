@@ -31,7 +31,10 @@ npm start
 
 ### CLI (recommended)
 ```bash
-# From spec file
+# From TypeScript DSL (preferred — less tokens, supports logic)
+claw2ui publish --spec-file /tmp/dashboard.ts --title "Dashboard"
+
+# From JSON spec
 claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
 
 # Raw HTML
@@ -160,6 +163,82 @@ If the user hasn't explicitly asked but the response would benefit from a web pa
 
 Include the URL in your response text. The API also returns platform-specific formatted summaries in `response.formats` that you can use for richer IM messages.
 
+## TypeScript DSL (Preferred)
+
+Write `.ts` files instead of JSON — fewer tokens, supports loops/conditionals, and auto-detected by `--spec-file`.
+
+```typescript
+import { page, container, header, row, stat, card, chart, table, col, badge, dataset } from "claw2ui/dsl"
+
+export default page("Sales Dashboard", [
+  container(
+    header("Sales", "Q1 2026"),
+    row(3,
+      stat("Revenue", "$1.2M", { change: 15.3, icon: "payments" }),
+      stat("Orders", "8,432", { change: 8.1, icon: "shopping_cart" }),
+      stat("Customers", "2,847", { change: -2.5, icon: "group" }),
+    ),
+    card("Revenue Trend",
+      chart("line", {
+        labels: ["Jan", "Feb", "Mar"],
+        datasets: [dataset("Revenue", [320000, 410000, 480000], {
+          borderColor: "#3b82f6", tension: 0.3,
+        })],
+      }, { height: 280 }),
+    ),
+    card("Top Products",
+      table(
+        [col("product", "Product"), col("revenue", "Revenue", "currency"),
+         badge("status", "Status", { Active: "success", "Low Stock": "warning" })],
+        [
+          { product: "Widget Pro", revenue: 450000, status: "Active" },
+          { product: "Gadget X", revenue: 320000, status: "Low Stock" },
+        ],
+      ),
+    ),
+  ),
+], { style: "anthropic" })
+```
+
+### DSL Functions
+
+**Page**: `page(title, components[], opts?)` — opts: `{ theme?, style? }`
+
+**Layout** (accept `...children`):
+- `container(...children)`, `row(cols, ...children)`, `column(span, ...children)`
+- `card(title, ...children)`, `list(direction, ...children)`, `modal(title, ...children)`
+
+**Special containers**:
+- `tabs(tab("id","Label",...children), tab(...))` — `tab()` is a helper, not a component
+- `accordion(section("Title",...children), section(...))` — `section()` is a helper
+
+**Data display** (positional + opts):
+- `stat(label, value, opts?)` — opts: `{ change?, icon? }`
+- `chart(chartType, data, opts?)` — opts: `{ height?, options?, legendPosition?, title? }`
+- `table(columns, rows, opts?)` — opts: `{ searchable?, perPage? }`
+
+**Input**: `button(label, variant?)`, `textField(label?, opts?)`, `select(label, options)`, `checkbox(label, value?)`, `choicePicker(label, options, opts?)`, `slider(label, opts?)`, `dateTimeInput(label, opts?)`
+
+**Media**: `markdown(content)`, `text(content, opts?)`, `code(content, language?)`, `html(content)`, `icon(name, size?)`, `image(src, alt?)`, `video(url, poster?)`, `audioPlayer(url, description?)`, `divider()`, `spacer(size?)`
+
+**Navigation**: `header(title, subtitle?)`, `link(href, label?, target?)`
+
+**Helpers**: `dataset(label, data[], opts?)`, `col(key, label?, format?)`, `badge(key, label, map)`, `months(n)`
+
+### DSL Supports Logic (JSON Cannot)
+
+```typescript
+// Loops
+const services = ["nginx", "postgres", "redis"]
+row(3, ...services.map(s => stat(s, "Running")))
+
+// Conditionals
+container(
+  header("Report"),
+  data.length > 0 ? card("Trend", chart("line", chartData)) : text("No data"),
+)
+```
+
 ## Example: Full Dashboard
 
-See `templates/dashboard.json` and `templates/analytics.json` for full examples.
+See `templates/dashboard.ts` (DSL) and `templates/dashboard.json` (JSON) for full examples.

@@ -71,7 +71,28 @@ claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 
 ### Step 2: Build the A2UI Spec
 
-Write the spec to a temp file. Always wrap content in a `container`.
+Write a `.ts` DSL file (preferred) or JSON spec to a temp file. Always wrap content in a `container`.
+
+**TypeScript DSL (preferred — fewer tokens, supports logic):**
+
+```bash
+cat > /tmp/claw2ui_page.ts << 'SPECEOF'
+import { page, container, header, row, stat, card, chart, table, col, badge, dataset } from "claw2ui/dsl"
+
+export default page("Page Title", [
+  container(
+    header("Title", "Description"),
+    row(3,
+      stat("Metric 1", "100", { change: 5.2, icon: "trending_up" }),
+      stat("Metric 2", "200"),
+      stat("Metric 3", "300"),
+    ),
+  ),
+], { style: "anthropic" })
+SPECEOF
+```
+
+**JSON spec:**
 
 ```bash
 cat > /tmp/claw2ui_page.json << 'SPECEOF'
@@ -129,9 +150,10 @@ claw2ui register --server <url>         # Self-service registration
 claw2ui init --server <url> --token <t> # Manual config
 
 # Publish
-claw2ui publish --spec-file <file> --title "Title"      # From JSON spec
-claw2ui publish --html "<h1>Hi</h1>" --title "Test"     # Raw HTML
-claw2ui publish --spec-file <file> --style anthropic       # With theme
+claw2ui publish --spec-file <file.ts> --title "Title"    # From TS DSL (preferred)
+claw2ui publish --spec-file <file.json> --title "Title"  # From JSON spec
+claw2ui publish --html "<h1>Hi</h1>" --title "Test"      # Raw HTML
+claw2ui publish --spec-file <file> --style anthropic     # With theme
 claw2ui publish --spec-file <file> --ttl 3600000         # With TTL (ms)
 
 # Themes
@@ -254,6 +276,43 @@ container
 ```
 
 ## Example: Complete Dashboard
+
+### TypeScript DSL (preferred)
+
+```typescript
+import { page, container, header, row, stat, card, chart, table, col, badge, dataset } from "claw2ui/dsl"
+
+export default page("Sales Dashboard", [
+  container(
+    header("Sales Dashboard", "Q1 2026 Overview"),
+    row(3,
+      stat("Revenue", "$1.2M", { change: 15.3, icon: "payments" }),
+      stat("Orders", "8,432", { change: 8.1, icon: "shopping_cart" }),
+      stat("Customers", "2,847", { change: -2.5, icon: "group" }),
+    ),
+    card("Revenue Trend",
+      chart("line", {
+        labels: ["Jan", "Feb", "Mar"],
+        datasets: [dataset("Revenue", [320000, 410000, 480000], {
+          borderColor: "#3b82f6", tension: 0.3,
+        })],
+      }, { height: 280 }),
+    ),
+    card("Top Products",
+      table(
+        [col("product", "Product"), col("revenue", "Revenue", "currency"),
+         badge("status", "Status", { Active: "success", "Low Stock": "warning" })],
+        [
+          { product: "Widget Pro", revenue: 450000, status: "Active" },
+          { product: "Gadget X", revenue: 320000, status: "Low Stock" },
+        ],
+      ),
+    ),
+  ),
+], { style: "anthropic" })
+```
+
+### JSON spec
 
 ```json
 {
