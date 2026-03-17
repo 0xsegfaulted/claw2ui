@@ -363,7 +363,7 @@ describe('runDslFile()', () => {
     const tmp = path.join(__dirname, '_test_no_export.ts');
     fs.writeFileSync(tmp, 'const x = 1;');
     try {
-      assert.throws(() => runDslFile(tmp), /must export a PageSpec/);
+      assert.throws(() => runDslFile(tmp, { noCheck: true }), /must export a PageSpec/);
     } finally {
       fs.unlinkSync(tmp);
     }
@@ -374,7 +374,7 @@ describe('runDslFile()', () => {
     const tmp = path.join(__dirname, '_test_blocked_require.ts');
     fs.writeFileSync(tmp, 'const fs = require("fs"); export default { components: [] };');
     try {
-      assert.throws(() => runDslFile(tmp), /can only import "claw2ui\/dsl"/);
+      assert.throws(() => runDslFile(tmp, { noCheck: true }), /can only import "claw2ui\/dsl"/);
     } finally {
       fs.unlinkSync(tmp);
     }
@@ -392,8 +392,45 @@ describe('runDslFile()', () => {
       export default page("Safe", []);
     `);
     try {
-      const spec = runDslFile(tmp);
+      const spec = runDslFile(tmp, { noCheck: true });
       assert.equal(spec.title, 'Safe');
+    } finally {
+      fs.unlinkSync(tmp);
+    }
+  });
+
+  it('type-checks valid DSL files by default', () => {
+    // templates/dashboard.ts is valid — should pass type checking
+    const spec = runDslFile(path.join(__dirname, '..', 'templates', 'dashboard.ts'));
+    assert.equal(spec.title, 'System Dashboard');
+  });
+
+  it('rejects DSL files with type errors', () => {
+    const fs = require('fs');
+    const tmp = path.join(__dirname, '_test_type_error.ts');
+    // stat() expects (string, string|number) — passing wrong types
+    fs.writeFileSync(tmp, `
+      import { page, stat } from "claw2ui/dsl";
+      export default page("Test", [stat(123, true)]);
+    `);
+    try {
+      assert.throws(() => runDslFile(tmp), /Type errors/);
+    } finally {
+      fs.unlinkSync(tmp);
+    }
+  });
+
+  it('skips type checking with noCheck option', () => {
+    const fs = require('fs');
+    const tmp = path.join(__dirname, '_test_no_check.ts');
+    // Wrong types, but should still run with noCheck
+    fs.writeFileSync(tmp, `
+      import { page, stat } from "claw2ui/dsl";
+      export default page("NoCheck", [stat(123 as any, true as any)]);
+    `);
+    try {
+      const spec = runDslFile(tmp, { noCheck: true });
+      assert.equal(spec.title, 'NoCheck');
     } finally {
       fs.unlinkSync(tmp);
     }

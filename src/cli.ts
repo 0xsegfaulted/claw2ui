@@ -108,6 +108,7 @@ Publish options:
   --title <title>      Page title
   --ttl <ms>           Time-to-live in milliseconds (0 = forever)
   --style <theme>      Rendering theme (e.g. "anthropic", "classic")
+  --no-check           Skip type checking for .ts DSL files
 
 Register options:
   --server <url>       Remote server URL
@@ -158,7 +159,8 @@ Examples:
         } else if (specFile) {
           if (specFile.endsWith('.ts')) {
             const { runDslFile } = require('./dsl/runner');
-            body.spec = runDslFile(path.resolve(specFile));
+            const noCheck = args.includes('--no-check');
+            body.spec = runDslFile(path.resolve(specFile), { noCheck });
           } else {
             body.spec = JSON.parse(fs.readFileSync(path.resolve(specFile), 'utf-8'));
           }

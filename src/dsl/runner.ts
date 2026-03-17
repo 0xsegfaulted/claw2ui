@@ -7,10 +7,60 @@ import type { PageSpec } from '../types';
 /** Max execution time for a DSL file (ms) */
 const DSL_TIMEOUT = 5000;
 
-export function runDslFile(filePath: string): PageSpec {
+/** Resolve the path to the DSL type declarations (dist/dsl/index.d.ts) */
+function getDslTypesPath(): string {
+  return path.resolve(__dirname, 'index.d.ts');
+}
+
+/**
+ * Type-check a DSL file using ts.createProgram.
+ * Returns an array of formatted diagnostic messages, empty if clean.
+ */
+function typeCheck(absPath: string): string[] {
+  const dslTypesPath = getDslTypesPath();
+
+  const program = ts.createProgram([absPath], {
+    target: ts.ScriptTarget.ES2020,
+    module: ts.ModuleKind.CommonJS,
+    esModuleInterop: true,
+    strict: true,
+    noEmit: true,
+    paths: { 'claw2ui/dsl': [dslTypesPath] },
+    baseUrl: path.dirname(absPath),
+  });
+
+  const diagnostics = ts.getPreEmitDiagnostics(program);
+  if (diagnostics.length === 0) return [];
+
+  return diagnostics.map(d => {
+    const msg = ts.flattenDiagnosticMessageText(d.messageText, '\n');
+    if (d.file && d.start !== undefined) {
+      const { line, character } = d.file.getLineAndCharacterOfPosition(d.start);
+      return `${path.basename(d.file.fileName)}:${line + 1}:${character + 1} - ${msg}`;
+    }
+    return msg;
+  });
+}
+
+export interface RunDslOptions {
+  /** Skip type checking (default: false) */
+  noCheck?: boolean;
+}
+
+export function runDslFile(filePath: string, opts?: RunDslOptions): PageSpec {
   const absPath = path.resolve(filePath);
   if (!fs.existsSync(absPath)) {
     throw new Error(`File not found: ${absPath}`);
+  }
+
+  // Type-check unless --no-check is set
+  if (!opts?.noCheck) {
+    const errors = typeCheck(absPath);
+    if (errors.length > 0) {
+      throw new Error(
+        `Type errors in ${path.basename(absPath)}:\n  ${errors.join('\n  ')}`,
+      );
+    }
   }
 
   const source = fs.readFileSync(absPath, 'utf-8');
@@ -27,7 +77,6 @@ export function runDslFile(filePath: string): PageSpec {
   });
 
   // Restricted require: only "claw2ui/dsl" is allowed.
-  // DSL files are data-generation scripts, not general-purpose Node programs.
   const dslModule = require('./index');
 
   const customRequire = (id: string) => {
@@ -48,15 +97,10 @@ export function runDslFile(filePath: string): PageSpec {
   // Known limitation: DSL functions (page, stat, etc.) are host functions
   // whose .constructor can reach the main-context Function. Node's vm module
   // is documented as not being a security mechanism. For fully untrusted code,
-  // worker_threads or child_process isolation would be needed. The current
-  // setup prevents accidental access and restricts the API surface.
+  // worker_threads or child_process isolation would be needed.
   const sandbox: any = vm.createContext(Object.create(null));
   sandbox.__require = customRequire;
 
-  // Everything runs inside a single runInContext() call so the timeout
-  // covers both the wrapper setup AND the user's transpiled DSL code.
-  // The IIFE captures __require as a parameter, then deletes it from
-  // the sandbox globals to minimize host function exposure.
   const fullScript = `
 (function(__req) {
   delete this.__require;
@@ -82,8 +126,6 @@ export function runDslFile(filePath: string): PageSpec {
   }
 
   // Marshal result through JSON to cross the VM context boundary cleanly.
-  // Objects from vm.createContext have different prototypes, so Array.isArray
-  // and instanceof would fail without this step.
   const raw = modExports.__esModule ? modExports.default : modExports;
   let result: any;
   try {
