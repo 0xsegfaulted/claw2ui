@@ -2,6 +2,34 @@
 name: claw2ui
 description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill when the user explicitly asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or web-based content. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "claw2ui". If the response would benefit from charts, sortable tables, or rich layout, **suggest** using Claw2UI and wait for user confirmation before publishing. Chinese triggers: "做个仪表盘", "画个图表", "做个报表", "生成一个页面", "做个dashboard", "数据可视化", "做个网页", "展示数据", "做个表格", "做个图", "发布一个页面", "做个看板". Additional English triggers: "create a webpage", "show analytics", "build a status page", "make a chart", "data overview", "show me stats", "create a board", "render a page", "comparison chart", "trend analysis", "pie chart", "bar chart", "line chart", "KPI dashboard", "metrics overview", "weekly report", "monthly report".'
 license: MIT
+metadata:
+  openclaw:
+    emoji: "📊"
+    requires:
+      bins:
+        - node
+        - claw2ui
+      optionalBins:
+        - cloudflared
+    install:
+      - id: claw2ui-npm
+        kind: npm
+        package: claw2ui
+        bins: ["claw2ui"]
+        label: "Install Claw2UI CLI (npm install -g claw2ui)"
+        verify: "https://github.com/0xsegfaulted/claw2ui"
+      - id: cloudflared-brew
+        kind: brew
+        formula: cloudflared
+        bins: ["cloudflared"]
+        label: "Install cloudflared (optional, for self-hosted tunnels)"
+    sideEffects:
+      - "Writes ~/.claw2ui.json (server URL and API token for authentication)"
+      - "Publishes page content to a public URL (default: https://0xsegfaulted-claw2ui.hf.space)"
+      - "Requires explicit user confirmation before every publish"
+    permissions:
+      - "network: POST page content to Claw2UI server API"
+      - "filesystem: write ~/.claw2ui.json (auth token), /tmp/*.json (temp spec files)"
 ---
 
 # Claw2UI - Agent-to-UI Bridge
