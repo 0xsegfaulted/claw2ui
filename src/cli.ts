@@ -93,6 +93,7 @@ Commands:
   publish    Create and publish a page
   list       List all pages
   delete     Delete a page
+  themes     List available rendering themes
   status     Show server status
   start      Start the server
   register   Register with a remote server (self-service)
@@ -106,6 +107,7 @@ Publish options:
   --spec-file <path>   Read spec from JSON file
   --title <title>      Page title
   --ttl <ms>           Time-to-live in milliseconds (0 = forever)
+  --style <theme>      Rendering theme (e.g. "anthropic", "classic")
 
 Register options:
   --server <url>       Remote server URL
@@ -122,6 +124,8 @@ Token subcommands:
 Examples:
   claw2ui publish --spec-file spec.json --title "Dashboard"
   claw2ui publish --html "<h1>Hello</h1>" --title "Test"
+  claw2ui publish --spec-file spec.json --style classic --title "Report"
+  claw2ui themes
   claw2ui register --server https://board.example.com
   claw2ui init --server https://board.example.com --token <token>
   claw2ui status`);
@@ -143,13 +147,17 @@ Examples:
           console.error('Page will still be published. Use response "formats" for platform-specific summaries.');
         }
 
+        const style = getArg(args, '--style');
         const body: Record<string, any> = { title, ttl };
+        if (style) body.style = style;
 
         if (spec) {
           body.spec = JSON.parse(spec);
+          if (style) body.spec.style = style;
         } else if (specFile) {
           const content = fs.readFileSync(path.resolve(specFile), 'utf-8');
           body.spec = JSON.parse(content);
+          if (style) body.spec.style = style;
         } else if (file) {
           body.html = fs.readFileSync(path.resolve(file), 'utf-8');
         } else if (htmlArg) {
@@ -192,12 +200,29 @@ Examples:
         break;
       }
 
+      case 'themes': {
+        const themes = await request('GET', '/api/themes');
+        if (Array.isArray(themes) && themes.length === 0) {
+          console.log('No themes available.');
+        } else if (Array.isArray(themes)) {
+          for (const t of themes) {
+            console.log(`${t.id.padEnd(16)} ${t.name.padEnd(24)} ${t.description}`);
+          }
+        } else {
+          console.error('Error:', themes);
+        }
+        break;
+      }
+
       case 'status': {
         const status = await request('GET', '/api/status');
         console.log(`Status: ${status.status}`);
         console.log(`Port: ${status.port}`);
         console.log(`Public URL: ${status.publicUrl || 'none'}`);
         console.log(`Pages: ${status.pages}`);
+        if (status.themes) {
+          console.log(`Themes: ${status.themes.join(', ')}`);
+        }
         break;
       }
 

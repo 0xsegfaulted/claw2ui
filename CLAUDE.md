@@ -40,6 +40,12 @@ claw2ui publish --html "<h1>Hello</h1>" --title "Test"
 # With TTL (auto-expire)
 claw2ui publish --spec-file /tmp/page.json --title "Temp" --ttl 3600000
 
+# With a specific theme
+claw2ui publish --spec-file /tmp/page.json --title "Report" --style classic
+
+# List available themes
+claw2ui themes
+
 # Manage pages
 claw2ui list
 claw2ui delete <page-id>
@@ -70,6 +76,7 @@ The API response includes `formats` with platform-specific summaries (e.g. `form
 {
   "title": "Page Title",
   "theme": "auto",
+  "style": "anthropic",
   "components": [
     { "type": "container", "children": [...] }
   ]
