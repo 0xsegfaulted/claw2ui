@@ -128,7 +128,7 @@ claw2ui init --server <url> --token <t> # Manual remote server config
 claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
 claw2ui publish --html "<h1>Hello</h1>" --title "Test"
 claw2ui publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
-claw2ui publish --spec-file /tmp/page.json --style classic --title "Report" # With theme
+claw2ui publish --spec-file /tmp/page.json --style anthropic --title "Report" # With theme
 
 # Themes
 claw2ui themes                          # List available themes

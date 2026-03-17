@@ -41,7 +41,7 @@ claw2ui publish --html "<h1>Hello</h1>" --title "Test"
 claw2ui publish --spec-file /tmp/page.json --title "Temp" --ttl 3600000
 
 # With a specific theme
-claw2ui publish --spec-file /tmp/page.json --title "Report" --style classic
+claw2ui publish --spec-file /tmp/page.json --title "Report" --style anthropic
 
 # List available themes
 claw2ui themes
