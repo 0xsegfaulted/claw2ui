@@ -44,12 +44,6 @@ claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 # Done! Token saved to ~/.claw2ui.json automatically.
 ```
 
-If you received a token manually from a server admin:
-
-```bash
-claw2ui init --server https://0xsegfaulted-claw2ui.hf.space --token <your-token>
-```
-
 > **Self-hosting**: To run your own Claw2UI server (local, Docker, or HF Space), see the [self-hosting guide](ref/self-hosting.md).
 
 ## Workflow
@@ -104,7 +98,7 @@ claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard"
 # For sensitive/temporary data, always set a TTL:
 claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard" --ttl 3600000
 # With a specific theme:
-claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Report" --style classic
+claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Report" --style anthropic
 ```
 
 Outputs the public URL.
@@ -123,7 +117,7 @@ claw2ui init --server <url> --token <t> # Manual config
 # Publish
 claw2ui publish --spec-file <file> --title "Title"      # From JSON spec
 claw2ui publish --html "<h1>Hi</h1>" --title "Test"     # Raw HTML
-claw2ui publish --spec-file <file> --style classic       # With theme
+claw2ui publish --spec-file <file> --style anthropic       # With theme
 claw2ui publish --spec-file <file> --ttl 3600000         # With TTL (ms)
 
 # Themes
