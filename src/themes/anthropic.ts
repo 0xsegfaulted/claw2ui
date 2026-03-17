@@ -7,10 +7,444 @@
  */
 import type { Theme } from './types';
 import type { Component, ColumnDef } from '../types';
+import { ComponentRegistry } from '../components/registry';
+import type { ComponentRenderFn } from '../components/registry';
 import {
   esc, escJs, escJsonInScript, sanitizeHtml,
   VALID_CHART_TYPES, iconName, normalizeDateValue, responsiveGridCols,
 } from '../render-utils';
+
+/* ------------------------------------------------------------------ */
+/*  Component Renderers                                                */
+/* ------------------------------------------------------------------ */
+
+const renderContainer: ComponentRenderFn = (comp, renderChild) => {
+  const children = (comp.children || []).map(renderChild).join('\n');
+  return `<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 c2u-stagger">${children}</div>`;
+};
+
+const renderRow: ComponentRenderFn = (comp, renderChild) => {
+  const p = comp.props || {};
+  const children = (comp.children || []).map(renderChild).join('\n');
+  return `<div class="grid ${responsiveGridCols(p.cols || 12)} gap-${p.gap || 4} mb-6 c2u-stagger">${children}</div>`;
+};
+
+const renderColumn: ComponentRenderFn = (comp, renderChild) => {
+  const p = comp.props || {};
+  const children = (comp.children || []).map(renderChild).join('\n');
+  return `<div class="col-span-${p.span || 1}">${children}</div>`;
+};
+
+const renderCard: ComponentRenderFn = (comp, renderChild) => {
+  const p = comp.props || {};
+  const children = (comp.children || []).map(renderChild).join('\n');
+  return `
+    <div class="c2u-card ${p.class || ''}">
+      ${p.title ? `<div class="c2u-card-header">
+        <h3 style="font-family:'Newsreader',Georgia,serif;font-size:1.1rem;font-weight:500;color:var(--c2u-text-heading);margin:0">${esc(p.title)}</h3>
+        ${p.subtitle ? `<p style="color:var(--c2u-text-secondary);font-size:0.85rem;margin-top:4px">${esc(p.subtitle)}</p>` : ''}
+      </div>` : ''}
+      <div class="c2u-card-body">${children}</div>
+    </div>`;
+};
+
+const renderTabs: ComponentRenderFn = (comp, renderChild) => {
+  const p = comp.props || {};
+  const tabs: Array<{ id: string; label: string; children?: Component[] }> = p.tabs || [];
+  return `
+    <div x-data="{ activeTab: '${escJs(tabs[0]?.id || '')}' }">
+      <div class="c2u-tabs-nav">
+        ${tabs.map(tab => `
+          <button @click="activeTab = '${escJs(tab.id)}'"
+            :class="activeTab === '${escJs(tab.id)}' ? 'c2u-tab-active' : ''"
+            class="c2u-tab-btn">${esc(tab.label)}</button>
+        `).join('')}
+      </div>
+      ${tabs.map(tab => `
+        <div x-show="activeTab === '${escJs(tab.id)}'" x-transition>
+          ${(tab.children || []).map(renderChild).join('\n')}
+        </div>
+      `).join('')}
+    </div>`;
+};
+
+const renderAccordion: ComponentRenderFn = (comp, renderChild) => {
+  const p = comp.props || {};
+  const items: Array<{ title: string; children?: Component[] }> = p.items || [];
+  return `
+    <div class="space-y-2">
+      ${items.map((item, i) => `
+        <div x-data="{ open: ${i === 0 ? 'true' : 'false'} }" class="c2u-accordion-item">
+          <button @click="open = !open" class="c2u-accordion-trigger">
+            <span>${esc(item.title)}</span>
+            <svg :class="open ? 'rotate-180' : ''" style="width:18px;height:18px;color:var(--c2u-text-secondary);transition:transform 0.2s ease" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div x-show="open" x-transition class="c2u-accordion-body">
+            ${(item.children || []).map(renderChild).join('\n')}
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+};
+
+const renderStat: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `
+    <div class="c2u-stat">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="c2u-stat-label">${esc(p.label || '')}</div>
+          <div class="c2u-stat-value">${esc(String(p.value || ''))}</div>
+          ${p.change != null ? `<div class="c2u-stat-change ${Number(p.change) >= 0 ? 'c2u-up' : 'c2u-down'}">
+            ${Number(p.change) >= 0 ? '\u2191' : '\u2193'} ${esc(String(Math.abs(Number(p.change))))}%
+          </div>` : ''}
+        </div>
+        ${p.icon ? `<div class="c2u-stat-icon">${esc(String(p.icon))}</div>` : ''}
+      </div>
+    </div>`;
+};
+
+const renderTable: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const columns: ColumnDef[] = p.columns || [];
+  const rows: Record<string, any>[] = p.rows || [];
+  return `
+    <div x-data="{ search: '', sort: '', asc: true, page: 0, perPage: ${p.perPage || 10} }" class="overflow-hidden">
+      ${p.searchable !== false ? `
+      <div class="mb-4 relative">
+        <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--c2u-text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input x-model="search" type="text" placeholder="Search..." class="c2u-search">
+      </div>` : ''}
+      <div class="c2u-table-wrap overflow-x-auto">
+        <table class="c2u-table">
+          <thead><tr>
+            ${columns.map(col => `
+              <th @click="sort === '${escJs(col.key)}' ? asc = !asc : (sort = '${escJs(col.key)}', asc = true)">
+                ${esc(col.label || col.key)}
+                <span x-show="sort === '${escJs(col.key)}'" x-text="asc ? ' \u2191' : ' \u2193'" style="color:var(--c2u-primary)"></span>
+              </th>
+            `).join('')}
+          </tr></thead>
+          <tbody>
+            ${rows.map((row, i) => `
+              <tr ${p.searchable !== false ? `x-show="${columns.map(c => `String($el.closest('table').querySelectorAll('tbody tr')[${i}]?.textContent || '').toLowerCase().includes(search.toLowerCase())`).join(' || ')} || search === ''"` : ''}>
+                ${columns.map(col => `<td>${formatCell(row[col.key], col)}</td>`).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+};
+
+const renderChart: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const chartId = `chart_${Math.random().toString(36).slice(2, 8)}`;
+  const chartType = VALID_CHART_TYPES.includes(p.chartType) ? p.chartType : 'line';
+  const chartData = escJsonInScript(JSON.stringify(p.data || {}));
+  const chartOptions = escJsonInScript(JSON.stringify({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: p.legendPosition || 'top' },
+      title: { display: !!p.title, text: p.title || '' },
+    },
+    ...(p.options || {}),
+  }));
+  const height = parseInt(String(p.height), 10) || 300;
+  return `
+    <div class="c2u-chart-wrap" style="height:${height}px">
+      <canvas id="${chartId}"></canvas>
+    </div>
+    <script>
+      (function(){
+        var ctx=document.getElementById('${chartId}').getContext('2d');
+        new Chart(ctx,{type:'${chartType}',data:${chartData},options:${chartOptions}});
+      })();
+    </script>`;
+};
+
+const renderButton: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const variantMap: Record<string, string> = {
+    secondary: 'c2u-btn-secondary',
+    danger: 'c2u-btn-danger',
+    outline: 'c2u-btn-outline',
+  };
+  return `<button class="c2u-btn ${variantMap[p.variant] || 'c2u-btn-primary'}">${esc(p.label || 'Button')}</button>`;
+};
+
+const renderTextField: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `
+    <div class="mb-4">
+      ${p.label ? `<label class="c2u-label">${esc(p.label)}</label>` : ''}
+      <input type="${p.inputType || 'text'}" placeholder="${esc(p.placeholder || '')}" value="${esc(p.value || '')}" class="c2u-input">
+    </div>`;
+};
+
+const renderSelect: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `
+    <div class="mb-4">
+      ${p.label ? `<label class="c2u-label">${esc(p.label)}</label>` : ''}
+      <select class="c2u-input">
+        ${(p.options || []).map((opt: any) => `<option value="${esc(opt.value || opt)}">${esc(opt.label || opt)}</option>`).join('')}
+      </select>
+    </div>`;
+};
+
+const renderImage: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const imgSrc = (p.src || '').replace(/^\s*javascript:/i, '');
+  return `<img src="${esc(imgSrc)}" alt="${esc(p.alt || '')}" class="c2u-image" loading="lazy">`;
+};
+
+const renderMarkdown: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `<div class="c2u-prose max-w-none">${sanitizeHtml(p.content || '')}</div>`;
+};
+
+const renderCode: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `<pre class="c2u-code"><code class="language-${p.language || 'text'}">${esc(p.content || '')}</code></pre>`;
+};
+
+const renderHtml: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return sanitizeHtml(p.content || '');
+};
+
+const renderText: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `<p class="text-${p.size || 'base'} ${p.class || ''} ${p.bold ? 'font-bold' : ''}" style="${p.class ? '' : 'color:var(--c2u-text)'}">${esc(p.content || '')}</p>`;
+};
+
+const renderDivider: ComponentRenderFn = () => `<hr class="c2u-divider">`;
+
+const renderSpacer: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `<div class="h-${p.size || 4}"></div>`;
+};
+
+const renderHeader: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `
+    <div class="c2u-header c2u-animate">
+      <h1 class="c2u-header-title">${esc(p.title || '')}</h1>
+      ${p.subtitle ? `<p class="c2u-header-subtitle">${esc(p.subtitle)}</p>` : ''}
+      <div class="c2u-header-rule"></div>
+    </div>`;
+};
+
+const renderLink: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const href = (p.href || '#').replace(/^\s*javascript:/i, '#');
+  return `<a href="${esc(href)}" target="${p.target || '_blank'}" rel="noopener noreferrer" class="c2u-link">${esc(p.label || p.href || 'Link')}</a>`;
+};
+
+const renderIcon: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const iconSize = parseInt(String(p.size), 10) || 24;
+  return `<span class="material-icons" style="font-size:${iconSize}px;color:var(--c2u-text-secondary)">${esc(String(iconName(p.name)))}</span>`;
+};
+
+const renderVideo: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const videoSrc = (p.url || '').replace(/^\s*javascript:/i, '');
+  return `
+    <video src="${esc(videoSrc)}" controls style="border-radius:var(--c2u-radius-sm);width:100%;max-width:42rem" preload="metadata"
+      ${p.poster ? `poster="${esc(p.poster)}"` : ''}>Your browser does not support the video tag.</video>`;
+};
+
+const renderAudioPlayer: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  return `
+    <div class="c2u-audio">
+      <audio src="${esc(p.url || '')}" controls class="flex-1 h-10"></audio>
+      ${p.description ? `<span style="font-size:0.85rem;color:var(--c2u-text-secondary);flex-shrink:0">${esc(p.description)}</span>` : ''}
+    </div>`;
+};
+
+const renderList: ComponentRenderFn = (comp, renderChild) => {
+  const p = comp.props || {};
+  const children = (comp.children || []).map(renderChild).join('\n');
+  return `
+    <div class="flex ${p.direction === 'horizontal' ? 'flex-row flex-wrap' : 'flex-col'} gap-${p.gap || 2}
+      ${p.align === 'center' ? 'items-center' : p.align === 'end' ? 'items-end' : p.align === 'stretch' ? 'items-stretch' : 'items-start'}">
+      ${children}
+    </div>`;
+};
+
+const renderModal: ComponentRenderFn = (comp, renderChild) => {
+  const p = comp.props || {};
+  const triggerChild = comp.children?.[0] ? renderChild(comp.children[0]) : `<button class="c2u-btn c2u-btn-primary">${esc(p.triggerLabel || 'Open')}</button>`;
+  const contentChildren = (comp.children || []).slice(1).map(renderChild).join('\n');
+  return `
+    <div x-data="{ open: false }">
+      <div @click="open = true" class="cursor-pointer inline-block">${triggerChild}</div>
+      <template x-teleport="body">
+        <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+          <div class="c2u-modal-backdrop" @click="open = false"></div>
+          <div class="c2u-modal-panel" @click.stop>
+            <button @click="open = false" class="c2u-modal-close">&times;</button>
+            ${p.title ? `<h3 style="font-family:'Newsreader',Georgia,serif;font-size:1.15rem;font-weight:500;color:var(--c2u-text-heading);margin:0 0 16px">${esc(p.title)}</h3>` : ''}
+            ${contentChildren || '<p style="color:var(--c2u-text-secondary)">Modal content</p>'}
+          </div>
+        </div>
+      </template>
+    </div>`;
+};
+
+const renderCheckbox: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const cbId = `cb_${Math.random().toString(36).slice(2, 8)}`;
+  return `
+    <label for="${cbId}" class="flex items-center gap-2 cursor-pointer select-none mb-2">
+      <input id="${cbId}" type="checkbox" ${p.value ? 'checked' : ''} class="c2u-checkbox">
+      <span style="font-size:0.875rem;color:var(--c2u-text)">${esc(p.label || '')}</span>
+    </label>`;
+};
+
+const renderChoicePicker: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const cpId = `cp_${Math.random().toString(36).slice(2, 8)}`;
+  const options: Array<{ label: string; value: string }> = p.options || [];
+  const selected: string[] = Array.isArray(p.value) ? p.value : [];
+  const isMulti = p.variant === 'multipleSelection';
+  const isChips = p.displayStyle === 'chips';
+
+  if (isChips) {
+    return `
+      <div class="mb-4">
+        ${p.label ? `<label class="c2u-label">${esc(p.label)}</label>` : ''}
+        <div class="flex flex-wrap gap-2">
+          ${options.map(opt => {
+            const sel = selected.includes(opt.value);
+            return `<button class="c2u-chip ${sel ? 'c2u-chip-active' : ''}">${esc(opt.label || opt.value)}</button>`;
+          }).join('\n')}
+        </div>
+      </div>`;
+  }
+
+  return `
+    <fieldset class="mb-4">
+      ${p.label ? `<legend class="c2u-label">${esc(p.label)}</legend>` : ''}
+      <div class="space-y-2">
+        ${options.map((opt) => {
+          const inputType = isMulti ? 'checkbox' : 'radio';
+          const sel = selected.includes(opt.value);
+          return `<label class="flex items-center gap-2 cursor-pointer">
+            <input type="${inputType}" name="${cpId}" value="${esc(opt.value)}" ${sel ? 'checked' : ''} class="c2u-checkbox">
+            <span style="font-size:0.875rem;color:var(--c2u-text)">${esc(opt.label || opt.value)}</span>
+          </label>`;
+        }).join('\n')}
+      </div>
+    </fieldset>`;
+};
+
+const renderSlider: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const sliderId = `slider_${Math.random().toString(36).slice(2, 8)}`;
+  const min = p.min ?? 0;
+  const max = p.max ?? 100;
+  const val = p.value ?? Math.round((min + max) / 2);
+  return `
+    <div class="mb-4" x-data="{ val: ${val} }">
+      ${p.label ? `<label class="c2u-label">
+        ${esc(p.label)} <span style="color:var(--c2u-primary);font-family:'Source Code Pro',monospace" x-text="val"></span>
+      </label>` : ''}
+      <input id="${sliderId}" type="range" min="${min}" max="${max}" x-model="val" class="c2u-slider">
+      <div class="flex justify-between mt-1" style="font-size:0.7rem;color:var(--c2u-text-secondary);font-family:'Source Code Pro',monospace">
+        <span>${min}</span><span>${max}</span>
+      </div>
+    </div>`;
+};
+
+const renderDateTimeInput: ComponentRenderFn = (comp) => {
+  const p = comp.props || {};
+  const dtId = `dt_${Math.random().toString(36).slice(2, 8)}`;
+  const enableDate = p.enableDate !== false;
+  const enableTime = p.enableTime === true;
+  let inputType = 'date';
+  if (enableDate && enableTime) inputType = 'datetime-local';
+  else if (!enableDate && enableTime) inputType = 'time';
+  return `
+    <div class="mb-4">
+      ${p.label ? `<label for="${dtId}" class="c2u-label">${esc(p.label)}</label>` : ''}
+      <input id="${dtId}" type="${inputType}" value="${esc(normalizeDateValue(p.value, inputType))}"
+        ${p.min ? `min="${esc(normalizeDateValue(p.min, inputType))}"` : ''} ${p.max ? `max="${esc(normalizeDateValue(p.max, inputType))}"` : ''}
+        class="c2u-input">
+    </div>`;
+};
+
+/* ------------------------------------------------------------------ */
+/*  Registry                                                           */
+/* ------------------------------------------------------------------ */
+
+/** Create a fully populated component registry for the Anthropic theme. */
+export function createAnthropicRegistry(): ComponentRegistry {
+  const registry = new ComponentRegistry();
+  // Layout
+  registry.register('container', renderContainer);
+  registry.register('row', renderRow);
+  registry.register('column', renderColumn);
+  registry.register('card', renderCard);
+  registry.register('tabs', renderTabs);
+  registry.register('accordion', renderAccordion);
+  registry.register('list', renderList);
+  registry.register('modal', renderModal);
+  // Data Display
+  registry.register('stat', renderStat);
+  registry.register('table', renderTable);
+  registry.register('chart', renderChart);
+  // Input
+  registry.register('button', renderButton);
+  registry.register('text-field', renderTextField);
+  registry.register('select', renderSelect);
+  registry.register('checkbox', renderCheckbox);
+  registry.register('choice-picker', renderChoicePicker);
+  registry.register('slider', renderSlider);
+  registry.register('date-time-input', renderDateTimeInput);
+  // Media
+  registry.register('icon', renderIcon);
+  registry.register('image', renderImage);
+  registry.register('video', renderVideo);
+  registry.register('audio-player', renderAudioPlayer);
+  registry.register('text', renderText);
+  registry.register('code', renderCode);
+  registry.register('markdown', renderMarkdown);
+  registry.register('html', renderHtml);
+  registry.register('divider', renderDivider);
+  registry.register('spacer', renderSpacer);
+  // Navigation
+  registry.register('header', renderHeader);
+  registry.register('link', renderLink);
+  return registry;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Cell Formatter                                                     */
+/* ------------------------------------------------------------------ */
+
+function formatCell(value: any, col: ColumnDef): string {
+  if (value === null || value === undefined) return '-';
+  if (col.format === 'currency') return `$${Number(value).toLocaleString()}`;
+  if (col.format === 'percent') return `${value}%`;
+  if (col.format === 'badge') {
+    const badgeColor = col.badgeMap?.[value] || 'info';
+    return `<span class="c2u-badge c2u-badge-${badgeColor}">${esc(String(value))}</span>`;
+  }
+  return esc(String(value));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Theme Object                                                       */
+/* ------------------------------------------------------------------ */
+
+const componentRegistry = createAnthropicRegistry();
 
 const theme: Theme = {
   meta: {
@@ -23,13 +457,16 @@ const theme: Theme = {
   getFontsHTML,
   getTailwindConfig,
   getChartDefaultsScript,
-  renderComponent,
+  renderComponent: (comp: Component) => componentRegistry.render(comp),
   formatCell,
   getFooterHTML,
+  getRegistry: () => componentRegistry,
 };
 
 export default theme;
 
+/* ------------------------------------------------------------------ */
+/*  Theme Assets (unchanged)                                           */
 /* ------------------------------------------------------------------ */
 
 function getFontsHTML(): string {
@@ -74,10 +511,6 @@ function getFooterHTML(): string {
     Powered by Claw2UI
   </div>`;
 }
-
-/* ------------------------------------------------------------------ */
-/*  Design CSS                                                         */
-/* ------------------------------------------------------------------ */
 
 function getDesignCSS(): string {
   return `
@@ -256,350 +689,4 @@ function getDesignCSS(): string {
       .c2u-chart-wrap{max-height:220px}
     }
   `;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Component Renderer                                                 */
-/* ------------------------------------------------------------------ */
-
-function renderComponent(comp: Component): string {
-  if (!comp || !comp.type) return '';
-  const t = comp.type;
-  const p = comp.props || {};
-  const children = (comp.children || []).map(renderComponent).join('\n');
-
-  switch (t) {
-    case 'container':
-      return `<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 c2u-stagger">${children}</div>`;
-
-    case 'row':
-      return `<div class="grid ${responsiveGridCols(p.cols || 12)} gap-${p.gap || 4} mb-6 c2u-stagger">${children}</div>`;
-
-    case 'column':
-      return `<div class="col-span-${p.span || 1}">${children}</div>`;
-
-    case 'card':
-      return `
-        <div class="c2u-card ${p.class || ''}">
-          ${p.title ? `<div class="c2u-card-header">
-            <h3 style="font-family:'Newsreader',Georgia,serif;font-size:1.1rem;font-weight:500;color:var(--c2u-text-heading);margin:0">${esc(p.title)}</h3>
-            ${p.subtitle ? `<p style="color:var(--c2u-text-secondary);font-size:0.85rem;margin-top:4px">${esc(p.subtitle)}</p>` : ''}
-          </div>` : ''}
-          <div class="c2u-card-body">${children}</div>
-        </div>`;
-
-    case 'tabs': {
-      const tabs: Array<{ id: string; label: string; children?: Component[] }> = p.tabs || [];
-      return `
-        <div x-data="{ activeTab: '${escJs(tabs[0]?.id || '')}' }">
-          <div class="c2u-tabs-nav">
-            ${tabs.map(tab => `
-              <button @click="activeTab = '${escJs(tab.id)}'"
-                :class="activeTab === '${escJs(tab.id)}' ? 'c2u-tab-active' : ''"
-                class="c2u-tab-btn">${esc(tab.label)}</button>
-            `).join('')}
-          </div>
-          ${tabs.map(tab => `
-            <div x-show="activeTab === '${escJs(tab.id)}'" x-transition>
-              ${(tab.children || []).map(renderComponent).join('\n')}
-            </div>
-          `).join('')}
-        </div>`;
-    }
-
-    case 'accordion': {
-      const items: Array<{ title: string; children?: Component[] }> = p.items || [];
-      return `
-        <div class="space-y-2">
-          ${items.map((item, i) => `
-            <div x-data="{ open: ${i === 0 ? 'true' : 'false'} }" class="c2u-accordion-item">
-              <button @click="open = !open" class="c2u-accordion-trigger">
-                <span>${esc(item.title)}</span>
-                <svg :class="open ? 'rotate-180' : ''" style="width:18px;height:18px;color:var(--c2u-text-secondary);transition:transform 0.2s ease" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              <div x-show="open" x-transition class="c2u-accordion-body">
-                ${(item.children || []).map(renderComponent).join('\n')}
-              </div>
-            </div>
-          `).join('')}
-        </div>`;
-    }
-
-    case 'stat':
-      return `
-        <div class="c2u-stat">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="c2u-stat-label">${esc(p.label || '')}</div>
-              <div class="c2u-stat-value">${esc(String(p.value || ''))}</div>
-              ${p.change != null ? `<div class="c2u-stat-change ${Number(p.change) >= 0 ? 'c2u-up' : 'c2u-down'}">
-                ${Number(p.change) >= 0 ? '\u2191' : '\u2193'} ${esc(String(Math.abs(Number(p.change))))}%
-              </div>` : ''}
-            </div>
-            ${p.icon ? `<div class="c2u-stat-icon">${esc(String(p.icon))}</div>` : ''}
-          </div>
-        </div>`;
-
-    case 'table': {
-      const columns: ColumnDef[] = p.columns || [];
-      const rows: Record<string, any>[] = p.rows || [];
-      return `
-        <div x-data="{ search: '', sort: '', asc: true, page: 0, perPage: ${p.perPage || 10} }" class="overflow-hidden">
-          ${p.searchable !== false ? `
-          <div class="mb-4 relative">
-            <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--c2u-text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input x-model="search" type="text" placeholder="Search..." class="c2u-search">
-          </div>` : ''}
-          <div class="c2u-table-wrap overflow-x-auto">
-            <table class="c2u-table">
-              <thead><tr>
-                ${columns.map(col => `
-                  <th @click="sort === '${escJs(col.key)}' ? asc = !asc : (sort = '${escJs(col.key)}', asc = true)">
-                    ${esc(col.label || col.key)}
-                    <span x-show="sort === '${escJs(col.key)}'" x-text="asc ? ' \u2191' : ' \u2193'" style="color:var(--c2u-primary)"></span>
-                  </th>
-                `).join('')}
-              </tr></thead>
-              <tbody>
-                ${rows.map((row, i) => `
-                  <tr ${p.searchable !== false ? `x-show="${columns.map(c => `String($el.closest('table').querySelectorAll('tbody tr')[${i}]?.textContent || '').toLowerCase().includes(search.toLowerCase())`).join(' || ')} || search === ''"` : ''}>
-                    ${columns.map(col => `<td>${formatCell(row[col.key], col)}</td>`).join('')}
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>`;
-    }
-
-    case 'chart': {
-      const chartId = `chart_${Math.random().toString(36).slice(2, 8)}`;
-      const chartType = VALID_CHART_TYPES.includes(p.chartType) ? p.chartType : 'line';
-      const chartData = escJsonInScript(JSON.stringify(p.data || {}));
-      const chartOptions = escJsonInScript(JSON.stringify({
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: p.legendPosition || 'top' },
-          title: { display: !!p.title, text: p.title || '' },
-        },
-        ...(p.options || {}),
-      }));
-      const height = parseInt(String(p.height), 10) || 300;
-      return `
-        <div class="c2u-chart-wrap" style="height:${height}px">
-          <canvas id="${chartId}"></canvas>
-        </div>
-        <script>
-          (function(){
-            var ctx=document.getElementById('${chartId}').getContext('2d');
-            new Chart(ctx,{type:'${chartType}',data:${chartData},options:${chartOptions}});
-          })();
-        </script>`;
-    }
-
-    case 'button': {
-      const variantMap: Record<string, string> = {
-        secondary: 'c2u-btn-secondary',
-        danger: 'c2u-btn-danger',
-        outline: 'c2u-btn-outline',
-      };
-      return `<button class="c2u-btn ${variantMap[p.variant] || 'c2u-btn-primary'}">${esc(p.label || 'Button')}</button>`;
-    }
-
-    case 'text-field':
-      return `
-        <div class="mb-4">
-          ${p.label ? `<label class="c2u-label">${esc(p.label)}</label>` : ''}
-          <input type="${p.inputType || 'text'}" placeholder="${esc(p.placeholder || '')}" value="${esc(p.value || '')}" class="c2u-input">
-        </div>`;
-
-    case 'select':
-      return `
-        <div class="mb-4">
-          ${p.label ? `<label class="c2u-label">${esc(p.label)}</label>` : ''}
-          <select class="c2u-input">
-            ${(p.options || []).map((opt: any) => `<option value="${esc(opt.value || opt)}">${esc(opt.label || opt)}</option>`).join('')}
-          </select>
-        </div>`;
-
-    case 'image': {
-      const imgSrc = (p.src || '').replace(/^\s*javascript:/i, '');
-      return `<img src="${esc(imgSrc)}" alt="${esc(p.alt || '')}" class="c2u-image" loading="lazy">`;
-    }
-
-    case 'markdown':
-      return `<div class="c2u-prose max-w-none">${sanitizeHtml(p.content || '')}</div>`;
-
-    case 'code':
-      return `<pre class="c2u-code"><code class="language-${p.language || 'text'}">${esc(p.content || '')}</code></pre>`;
-
-    case 'html':
-      return sanitizeHtml(p.content || '');
-
-    case 'text':
-      return `<p class="text-${p.size || 'base'} ${p.class || ''} ${p.bold ? 'font-bold' : ''}" style="${p.class ? '' : 'color:var(--c2u-text)'}">${esc(p.content || '')}</p>`;
-
-    case 'divider':
-      return `<hr class="c2u-divider">`;
-
-    case 'spacer':
-      return `<div class="h-${p.size || 4}"></div>`;
-
-    case 'header':
-      return `
-        <div class="c2u-header c2u-animate">
-          <h1 class="c2u-header-title">${esc(p.title || '')}</h1>
-          ${p.subtitle ? `<p class="c2u-header-subtitle">${esc(p.subtitle)}</p>` : ''}
-          <div class="c2u-header-rule"></div>
-        </div>`;
-
-    case 'link': {
-      const href = (p.href || '#').replace(/^\s*javascript:/i, '#');
-      return `<a href="${esc(href)}" target="${p.target || '_blank'}" rel="noopener noreferrer" class="c2u-link">${esc(p.label || p.href || 'Link')}</a>`;
-    }
-
-    case 'icon': {
-      const iconSize = parseInt(String(p.size), 10) || 24;
-      return `<span class="material-icons" style="font-size:${iconSize}px;color:var(--c2u-text-secondary)">${esc(String(iconName(p.name)))}</span>`;
-    }
-
-    case 'video': {
-      const videoSrc = (p.url || '').replace(/^\s*javascript:/i, '');
-      return `
-        <video src="${esc(videoSrc)}" controls style="border-radius:var(--c2u-radius-sm);width:100%;max-width:42rem" preload="metadata"
-          ${p.poster ? `poster="${esc(p.poster)}"` : ''}>Your browser does not support the video tag.</video>`;
-    }
-
-    case 'audio-player':
-      return `
-        <div class="c2u-audio">
-          <audio src="${esc(p.url || '')}" controls class="flex-1 h-10"></audio>
-          ${p.description ? `<span style="font-size:0.85rem;color:var(--c2u-text-secondary);flex-shrink:0">${esc(p.description)}</span>` : ''}
-        </div>`;
-
-    case 'list':
-      return `
-        <div class="flex ${p.direction === 'horizontal' ? 'flex-row flex-wrap' : 'flex-col'} gap-${p.gap || 2}
-          ${p.align === 'center' ? 'items-center' : p.align === 'end' ? 'items-end' : p.align === 'stretch' ? 'items-stretch' : 'items-start'}">
-          ${children}
-        </div>`;
-
-    case 'modal': {
-      const triggerChild = comp.children?.[0] ? renderComponent(comp.children[0]) : `<button class="c2u-btn c2u-btn-primary">${esc(p.triggerLabel || 'Open')}</button>`;
-      const contentChildren = (comp.children || []).slice(1).map(renderComponent).join('\n');
-      return `
-        <div x-data="{ open: false }">
-          <div @click="open = true" class="cursor-pointer inline-block">${triggerChild}</div>
-          <template x-teleport="body">
-            <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
-              <div class="c2u-modal-backdrop" @click="open = false"></div>
-              <div class="c2u-modal-panel" @click.stop>
-                <button @click="open = false" class="c2u-modal-close">&times;</button>
-                ${p.title ? `<h3 style="font-family:'Newsreader',Georgia,serif;font-size:1.15rem;font-weight:500;color:var(--c2u-text-heading);margin:0 0 16px">${esc(p.title)}</h3>` : ''}
-                ${contentChildren || '<p style="color:var(--c2u-text-secondary)">Modal content</p>'}
-              </div>
-            </div>
-          </template>
-        </div>`;
-    }
-
-    case 'checkbox': {
-      const cbId = `cb_${Math.random().toString(36).slice(2, 8)}`;
-      return `
-        <label for="${cbId}" class="flex items-center gap-2 cursor-pointer select-none mb-2">
-          <input id="${cbId}" type="checkbox" ${p.value ? 'checked' : ''} class="c2u-checkbox">
-          <span style="font-size:0.875rem;color:var(--c2u-text)">${esc(p.label || '')}</span>
-        </label>`;
-    }
-
-    case 'choice-picker': {
-      const cpId = `cp_${Math.random().toString(36).slice(2, 8)}`;
-      const options: Array<{ label: string; value: string }> = p.options || [];
-      const selected: string[] = Array.isArray(p.value) ? p.value : [];
-      const isMulti = p.variant === 'multipleSelection';
-      const isChips = p.displayStyle === 'chips';
-
-      if (isChips) {
-        return `
-          <div class="mb-4">
-            ${p.label ? `<label class="c2u-label">${esc(p.label)}</label>` : ''}
-            <div class="flex flex-wrap gap-2">
-              ${options.map(opt => {
-                const sel = selected.includes(opt.value);
-                return `<button class="c2u-chip ${sel ? 'c2u-chip-active' : ''}">${esc(opt.label || opt.value)}</button>`;
-              }).join('\n')}
-            </div>
-          </div>`;
-      }
-
-      return `
-        <fieldset class="mb-4">
-          ${p.label ? `<legend class="c2u-label">${esc(p.label)}</legend>` : ''}
-          <div class="space-y-2">
-            ${options.map((opt) => {
-              const inputType = isMulti ? 'checkbox' : 'radio';
-              const sel = selected.includes(opt.value);
-              return `<label class="flex items-center gap-2 cursor-pointer">
-                <input type="${inputType}" name="${cpId}" value="${esc(opt.value)}" ${sel ? 'checked' : ''} class="c2u-checkbox">
-                <span style="font-size:0.875rem;color:var(--c2u-text)">${esc(opt.label || opt.value)}</span>
-              </label>`;
-            }).join('\n')}
-          </div>
-        </fieldset>`;
-    }
-
-    case 'slider': {
-      const sliderId = `slider_${Math.random().toString(36).slice(2, 8)}`;
-      const min = p.min ?? 0;
-      const max = p.max ?? 100;
-      const val = p.value ?? Math.round((min + max) / 2);
-      return `
-        <div class="mb-4" x-data="{ val: ${val} }">
-          ${p.label ? `<label class="c2u-label">
-            ${esc(p.label)} <span style="color:var(--c2u-primary);font-family:'Source Code Pro',monospace" x-text="val"></span>
-          </label>` : ''}
-          <input id="${sliderId}" type="range" min="${min}" max="${max}" x-model="val" class="c2u-slider">
-          <div class="flex justify-between mt-1" style="font-size:0.7rem;color:var(--c2u-text-secondary);font-family:'Source Code Pro',monospace">
-            <span>${min}</span><span>${max}</span>
-          </div>
-        </div>`;
-    }
-
-    case 'date-time-input': {
-      const dtId = `dt_${Math.random().toString(36).slice(2, 8)}`;
-      const enableDate = p.enableDate !== false;
-      const enableTime = p.enableTime === true;
-      let inputType = 'date';
-      if (enableDate && enableTime) inputType = 'datetime-local';
-      else if (!enableDate && enableTime) inputType = 'time';
-      return `
-        <div class="mb-4">
-          ${p.label ? `<label for="${dtId}" class="c2u-label">${esc(p.label)}</label>` : ''}
-          <input id="${dtId}" type="${inputType}" value="${esc(normalizeDateValue(p.value, inputType))}"
-            ${p.min ? `min="${esc(normalizeDateValue(p.min, inputType))}"` : ''} ${p.max ? `max="${esc(normalizeDateValue(p.max, inputType))}"` : ''}
-            class="c2u-input">
-        </div>`;
-    }
-
-    default:
-      return `<!-- unknown component: ${t} -->`;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/*  Cell Formatter                                                     */
-/* ------------------------------------------------------------------ */
-
-function formatCell(value: any, col: ColumnDef): string {
-  if (value === null || value === undefined) return '-';
-  if (col.format === 'currency') return `$${Number(value).toLocaleString()}`;
-  if (col.format === 'percent') return `${value}%`;
-  if (col.format === 'badge') {
-    const badgeColor = col.badgeMap?.[value] || 'info';
-    return `<span class="c2u-badge c2u-badge-${badgeColor}">${esc(String(value))}</span>`;
-  }
-  return esc(String(value));
 }

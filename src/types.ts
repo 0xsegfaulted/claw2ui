@@ -6,6 +6,21 @@ export interface Component {
   children?: Component[];
 }
 
+// Re-export typed component interfaces for type-safe spec construction
+export type {
+  TypedComponent, ComponentType, PropsOf,
+  StatProps, ChartProps, ChartType, TableProps,
+  ButtonProps, ButtonVariant, TextFieldProps,
+  SelectProps, SelectOption, CheckboxProps,
+  ChoicePickerProps, SliderProps, DateTimeInputProps,
+  ContainerProps, RowProps, ColumnProps, CardProps,
+  TabsProps, TabItem, AccordionProps, AccordionItem,
+  ListProps, ModalProps,
+  IconProps, ImageProps, VideoProps, AudioPlayerProps,
+  TextProps, CodeProps, MarkdownProps, HtmlProps, SpacerProps,
+  HeaderProps, LinkProps,
+} from './components/types';
+
 export interface PageSpec {
   title?: string;
   theme?: 'light' | 'dark' | 'auto';
