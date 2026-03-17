@@ -8,6 +8,7 @@ Claw2UI takes a declarative JSON spec (or raw HTML) and renders it into a fully 
 
 ## Features
 
+- **TypeScript DSL** — type-checked page specs with loops, conditionals, and auto-completion
 - **30+ UI components** — stats, charts, tables, tabs, modals, forms, and more
 - **Pluggable themes** — Anthropic Editorial (default) and Classic, with runtime registration
 - **Mobile responsive** — fluid `clamp()` sizing, adapts to any screen
@@ -27,18 +28,21 @@ Claw2UI takes a declarative JSON spec (or raw HTML) and renders it into a fully 
 # Install globally
 npm install -g claw2ui
 
-# Start the server (opens a tunnel automatically)
-claw2ui start
+# Register with the public server (one-time)
+claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 
-# Publish a page from a JSON spec
+# Publish a page from a TypeScript DSL spec (recommended)
+claw2ui publish --spec-file dashboard.ts --title "My Dashboard"
+# → https://0xsegfaulted-claw2ui.hf.space/p/abc123
+
+# Or from JSON spec
 claw2ui publish --spec-file dashboard.json --title "My Dashboard"
-# → https://random-words.trycloudflare.com/p/abc123
 
 # Use a specific theme
-claw2ui publish --spec-file report.json --title "Report" --style classic
+claw2ui publish --spec-file report.ts --title "Report" --style classic
 
-# List available themes
-claw2ui themes
+# Self-host: start your own server (opens a tunnel automatically)
+claw2ui start
 ```
 
 ## Installation
@@ -67,9 +71,11 @@ Without cloudflared, Claw2UI falls back to localhost-only mode.
 claw2ui start                    # Start server + tunnel
 claw2ui status                   # Check server status
 claw2ui themes                   # List available themes
-claw2ui publish --spec-file <file> --title "Title"  # Publish from spec
-claw2ui publish --html "<h1>Hi</h1>" --title "Test" # Publish raw HTML
-claw2ui publish --spec-file <file> --style classic   # Use specific theme
+claw2ui publish --spec-file <file.ts> --title "Title"  # Publish from TS DSL (type-checked)
+claw2ui publish --spec-file <file.json> --title "Title" # Publish from JSON spec
+claw2ui publish --spec-file <file.ts> --no-check        # Skip type checking
+claw2ui publish --html "<h1>Hi</h1>" --title "Test"     # Publish raw HTML
+claw2ui publish --spec-file <file> --style classic       # Use specific theme
 claw2ui list                     # List all pages
 claw2ui delete <page-id>         # Delete a page
 claw2ui register                 # Self-service token registration (remote server)
@@ -81,7 +87,8 @@ claw2ui token revoke <id>        # Admin: revoke a token
 
 | Flag | Description |
 |------|-------------|
-| `--spec-file <path>` | A2UI component spec (JSON file) |
+| `--spec-file <path>` | A2UI component spec (`.ts` DSL or `.json`) |
+| `--no-check` | Skip type checking for `.ts` DSL files |
 | `--spec <json>` | Inline JSON spec |
 | `--html <html>` | Raw HTML content |
 | `--file <path>` | Read HTML from file |
@@ -144,9 +151,78 @@ Specify a theme in the spec:
 
 Or via CLI: `claw2ui publish --spec-file spec.json --style classic`
 
-## Component Spec (A2UI)
+## TypeScript DSL (Recommended)
 
-Pages are described as a JSON tree of components:
+Write `.ts` files instead of JSON — type-checked, ~60% fewer tokens, and supports loops/conditionals.
+
+```typescript
+import { page, container, header, row, stat, card, chart, table, col, badge, dataset, months } from "claw2ui/dsl"
+
+export default page("Sales Dashboard", [
+  container(
+    header("Sales Dashboard", "Q1 2026"),
+    row(3,
+      stat("Revenue", "$1.2M", { change: 15.3, icon: "payments" }),
+      stat("Orders", "8,432", { change: 8.1, icon: "shopping_cart" }),
+      stat("Customers", "2,847", { change: -2.5, icon: "group" }),
+    ),
+    card("Revenue Trend",
+      chart("line", {
+        labels: months(6),
+        datasets: [dataset("Revenue", [320, 410, 380, 450, 480, 520], {
+          borderColor: "#3b82f6", tension: 0.3, fill: true,
+        })],
+      }, { height: 280 }),
+    ),
+    card("Top Products",
+      table(
+        [col("name", "Name"), col("rev", "Revenue", "currency"),
+         badge("status", "Status", { Active: "success", "Low Stock": "warning" })],
+        [
+          { name: "Widget Pro", rev: 450000, status: "Active" },
+          { name: "Gadget X", rev: 320000, status: "Low Stock" },
+        ],
+      ),
+    ),
+  ),
+], { style: "anthropic" })
+```
+
+### DSL supports logic
+
+```typescript
+// Loops — generate stats from data
+const services = ["nginx", "postgres", "redis"]
+row(3, ...services.map(s => stat(s, "Running")))
+
+// Conditionals
+container(
+  header("Report"),
+  data.length > 0 ? card("Trend", chart("line", chartData)) : text("No data"),
+)
+```
+
+### DSL Function Reference
+
+**Page**: `page(title, components[], opts?)` — opts: `{ theme?, style? }`
+
+**Layout**: `container(...)`, `row(cols, ...)`, `column(span, ...)`, `card(title, ...)`, `list(dir, ...)`, `modal(title, ...)`
+
+**Special**: `tabs(tab("id","Label",...), ...)`, `accordion(section("Title",...), ...)`
+
+**Data**: `stat(label, value, opts?)`, `chart(type, data, opts?)`, `table(columns, rows, opts?)`
+
+**Helpers**: `dataset(label, data[], opts?)`, `col(key, label?, format?)`, `badge(key, label, map)`, `months(n)`
+
+**Input**: `button`, `textField`, `select`, `checkbox`, `choicePicker`, `slider`, `dateTimeInput`
+
+**Media**: `markdown`, `text`, `code`, `html`, `icon`, `image`, `video`, `audioPlayer`, `divider`, `spacer`
+
+**Navigation**: `header(title, subtitle?)`, `link(href, label?, target?)`
+
+## Component Spec (JSON)
+
+JSON specs are still supported. Pages are described as a JSON tree of components:
 
 ```json
 {
@@ -211,26 +287,50 @@ claw2ui start
 
 ### Docker / HF Space
 
-Claw2UI includes a `Dockerfile` for cloud deployment (e.g. Hugging Face Spaces):
+Claw2UI includes a `Dockerfile` for cloud deployment (e.g. Hugging Face Spaces). Free tier sleeps after 48h idle and auto-wakes on visit.
 
 ```bash
-# Create HF Space
+# Install HF CLI
+pip install huggingface_hub[cli]
+hf auth login
+
+# Create a Docker Space
 hf repos create yourname/claw2ui --type space --space-sdk docker
 
+# Prepare deploy directory (only the files Docker needs)
+mkdir -p /tmp/claw2ui-deploy
+cp package.json package-lock.json tsconfig.json Dockerfile /tmp/claw2ui-deploy/
+cp -r src bin templates /tmp/claw2ui-deploy/
+
+# Add HF Space README (required)
+cat > /tmp/claw2ui-deploy/README.md << 'EOF'
+---
+title: Claw2UI
+emoji: 📊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+license: mit
+---
+EOF
+
 # Upload
-hf upload yourname/claw2ui . . --type space
+hf upload yourname/claw2ui /tmp/claw2ui-deploy . --type space
 ```
 
-Set these Secrets in your Space settings:
+Set these **Secrets** in your Space settings (Settings -> Variables and secrets):
 
-| Secret | Value |
-|--------|-------|
-| `CLAWBOARD_TOKEN` | Your admin token |
-| `CLAWBOARD_PUBLIC_URL` | `https://yourname-claw2ui.hf.space` |
-| `HF_TOKEN` | HF token with write access (for backup) |
-| `CLAWBOARD_BACKUP_REPO` | `yourname/claw2ui-data` (private dataset) |
+| Secret | Required | Value |
+|--------|----------|-------|
+| `CLAWBOARD_TOKEN` | Yes | Admin token (`python3 -c "import secrets; print(secrets.token_hex(32))"`) |
+| `CLAWBOARD_PUBLIC_URL` | Yes | `https://yourname-claw2ui.hf.space` |
+| `HF_TOKEN` | Optional | HF token with write access (for backup) |
+| `CLAWBOARD_BACKUP_REPO` | Optional | `yourname/claw2ui-data` (private dataset for persistence) |
 
-The server auto-backs up pages and tokens to an HF Dataset, restoring them on restart.
+The Dockerfile sets `CLAWBOARD_BIND=0.0.0.0`, `CLAWBOARD_PORT=7860`, `CLAWBOARD_TRUST_PROXY=1` automatically. With backup configured, pages and tokens persist across Space restarts.
+
+> **Important**: Pages are rendered at publish time. Deploying new code only affects future publishes — existing pages keep their original HTML.
 
 ## Configuration
 

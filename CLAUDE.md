@@ -242,3 +242,58 @@ container(
 ## Example: Full Dashboard
 
 See `templates/dashboard.ts` (DSL) and `templates/dashboard.json` (JSON) for full examples.
+
+## HF Space Deployment
+
+### Deploy Procedure
+
+```bash
+# 1. Prepare a clean deploy directory (only the files Dockerfile needs)
+rm -rf /tmp/claw2ui-hf && mkdir -p /tmp/claw2ui-hf
+cp package.json package-lock.json tsconfig.json Dockerfile /tmp/claw2ui-hf/
+cp -r src /tmp/claw2ui-hf/src
+cp -r bin /tmp/claw2ui-hf/bin
+cp -r templates /tmp/claw2ui-hf/templates
+
+# 2. Add HF Space README with required YAML frontmatter
+cat > /tmp/claw2ui-hf/README.md << 'EOF'
+---
+title: Claw2UI
+emoji: 📊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+license: mit
+---
+
+Agent-to-UI bridge.
+EOF
+
+# 3. Upload (--delete "*" removes stale files from previous deploys)
+hf upload <username>/claw2ui /tmp/claw2ui-hf . --type space --delete "*" --commit-message "deploy: <description>"
+
+# 4. Wait ~3-4 minutes for build, then verify
+curl -s https://<username>-claw2ui.hf.space/api/status
+```
+
+### Known Pitfalls
+
+1. **README.md must have HF YAML frontmatter** — Without `sdk: docker` in the frontmatter, the Space enters `CONFIG_ERROR` with "Missing configuration in README". The project's own README.md does NOT have this frontmatter, so you must write a separate one for the deploy directory.
+
+2. **Directory structure must be preserved** — The Dockerfile expects `src/`, `bin/`, `templates/` as directories. If the upload flattens the structure (files end up at root instead of in subdirectories), `COPY src/ src/` fails and `tsc` compilation errors out with `BUILD_ERROR`. Always use `cp -r src /tmp/deploy/src` (not `cp -r src/ /tmp/deploy/`) and verify with `ls /tmp/deploy/` before uploading.
+
+3. **Don't upload the entire repo** — Only upload what Docker needs: `package.json`, `package-lock.json`, `tsconfig.json`, `Dockerfile`, `src/`, `bin/`, `templates/`, and the HF-specific `README.md`. Uploading everything (including `node_modules/`, `dist/`, `.claude/`, `test/`) wastes time and can cause conflicts.
+
+4. **Use `--delete "*"` to clean stale files** — Without this flag, old files from previous deploys remain on the Space. If directory structure changed between deploys, leftover flat files can confuse the build.
+
+5. **Pages are rendered at publish time** — Deploying new code (themes, components, renderer) does NOT update existing pages. Already-published pages keep their original HTML. To update a page, it must be re-published.
+
+6. **Build takes 3-4 minutes** — `npm ci` + `tsc` on free tier `cpu-basic`. Check status with:
+   ```bash
+   curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
+     "https://huggingface.co/api/spaces/<username>/claw2ui/runtime"
+   ```
+   Stages: `BUILDING` → `RUNNING` (success) or `BUILD_ERROR` (check `errorMessage`).
+
+7. **Space Secrets are set via HF web UI** — `CLAWBOARD_TOKEN`, `CLAWBOARD_PUBLIC_URL` are required. `HF_TOKEN` + `CLAWBOARD_BACKUP_REPO` are optional (for persistence across restarts). Secrets survive redeploys — you only set them once.
