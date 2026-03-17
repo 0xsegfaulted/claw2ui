@@ -10,6 +10,7 @@
  *   3. Done — users can select it via the "style" field in PageSpec
  */
 import type { Component, ColumnDef } from '../types';
+import type { ComponentRegistry } from '../components/registry';
 
 export interface ThemeMeta {
   /** Display name shown in UI */
@@ -67,4 +68,10 @@ export interface Theme {
    * Return the footer HTML shown at the bottom of every page.
    */
   getFooterHTML(): string;
+
+  /**
+   * Return the component registry used by this theme.
+   * Allows runtime registration of custom components.
+   */
+  getRegistry(): ComponentRegistry;
 }
