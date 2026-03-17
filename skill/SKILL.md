@@ -29,12 +29,12 @@ metadata:
       - "Requires explicit user confirmation before every publish"
     permissions:
       - "network: POST page content to Claw2UI server API"
-      - "filesystem: write ~/.claw2ui.json (auth token), /tmp/*.json (temp spec files)"
+      - "filesystem: write ~/.claw2ui.json (auth token), /tmp/*.ts (temp spec files)"
 ---
 
 # Claw2UI - Agent-to-UI Bridge
 
-Generate interactive web pages from declarative JSON specs and serve them via a public URL. Pages include Tailwind CSS, Alpine.js, and Chart.js out of the box, with pluggable themes and mobile-responsive layouts.
+Generate interactive web pages from TypeScript DSL specs and serve them via a public URL. Pages include Tailwind CSS, Alpine.js, and Chart.js out of the box, with pluggable themes, type checking, and mobile-responsive layouts.
 
 > **Source**: [GitHub](https://github.com/0xsegfaulted/claw2ui) · [npm](https://www.npmjs.com/package/claw2ui) · [HF Space](https://huggingface.co/spaces/0xsegfaulted/claw2ui) · License: MIT
 
@@ -69,15 +69,13 @@ claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 ```
 
-### Step 2: Build the A2UI Spec
+### Step 2: Write a TypeScript DSL Spec
 
-Write a `.ts` DSL file (preferred) or JSON spec to a temp file. Always wrap content in a `container`.
-
-**TypeScript DSL (preferred — fewer tokens, supports logic):**
+Write a `.ts` file. Always wrap content in a `container`. The file is type-checked automatically.
 
 ```bash
 cat > /tmp/claw2ui_page.ts << 'SPECEOF'
-import { page, container, header, row, stat, card, chart, table, col, badge, dataset } from "claw2ui/dsl"
+import { page, container, header, row, stat, card, chart, dataset } from "claw2ui/dsl"
 
 export default page("Page Title", [
   container(
@@ -87,36 +85,16 @@ export default page("Page Title", [
       stat("Metric 2", "200"),
       stat("Metric 3", "300"),
     ),
+    card("Trend",
+      chart("line", {
+        labels: ["Jan", "Feb", "Mar"],
+        datasets: [dataset("Value", [10, 20, 15], { borderColor: "#3b82f6", tension: 0.3 })],
+      }),
+    ),
   ),
 ], { style: "anthropic" })
 SPECEOF
 ```
-
-**JSON spec:**
-
-```bash
-cat > /tmp/claw2ui_page.json << 'SPECEOF'
-{
-  "title": "Page Title",
-  "style": "anthropic",
-  "components": [
-    { "type": "container", "children": [
-      { "type": "header", "props": { "title": "Title", "subtitle": "Description" } },
-      ...more components...
-    ]}
-  ]
-}
-SPECEOF
-```
-
-#### Available Themes (`style` field)
-
-| Theme | Description |
-|-------|-------------|
-| `anthropic` | **(default)** Warm editorial aesthetic — Newsreader serif headings, terracotta accents, cream backgrounds |
-| `classic` | Original Tailwind look — blue accents, system fonts, gray surfaces |
-
-Omit `style` to use the default (`anthropic`). Use `claw2ui themes` to list all available themes at runtime.
 
 ### Step 3: Confirm with User
 
@@ -129,11 +107,11 @@ Before publishing, tell the user what will be published and confirm they want to
 Only after user confirmation:
 
 ```bash
-claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard"
+claw2ui publish --spec-file /tmp/claw2ui_page.ts --title "Dashboard"
 # For sensitive/temporary data, always set a TTL:
-claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard" --ttl 3600000
-# With a specific theme:
-claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Report" --style anthropic
+claw2ui publish --spec-file /tmp/claw2ui_page.ts --title "Dashboard" --ttl 3600000
+# Skip type checking for faster publish (not recommended):
+claw2ui publish --spec-file /tmp/claw2ui_page.ts --title "Dashboard" --no-check
 ```
 
 Outputs the public URL.
@@ -150,8 +128,9 @@ claw2ui register --server <url>         # Self-service registration
 claw2ui init --server <url> --token <t> # Manual config
 
 # Publish
-claw2ui publish --spec-file <file.ts> --title "Title"    # From TS DSL (preferred)
-claw2ui publish --spec-file <file.json> --title "Title"  # From JSON spec
+claw2ui publish --spec-file <file.ts> --title "Title"    # From TS DSL (type-checked)
+claw2ui publish --spec-file <file.ts> --no-check         # Skip type checking
+claw2ui publish --spec-file <file.json> --title "Title"  # From JSON spec (legacy)
 claw2ui publish --html "<h1>Hi</h1>" --title "Test"      # Raw HTML
 claw2ui publish --spec-file <file> --style anthropic     # With theme
 claw2ui publish --spec-file <file> --ttl 3600000         # With TTL (ms)
@@ -165,146 +144,203 @@ claw2ui delete <page-id>               # Delete a page
 claw2ui status                          # Check server status
 ```
 
-## Available Components
+## DSL Function Reference
 
-### Layout
-- `container` - Always use as the outermost wrapper. Centers content with max-width.
-- `row` - Grid row. Props: `cols` (number of columns, e.g. 3), `gap` (spacing)
-- `column` - Grid column. Props: `span` (how many columns to occupy)
-- `card` - Card with border/shadow. Props: `title`, `subtitle`
-- `tabs` - Tabbed sections. Props: `tabs: [{ id: "t1", label: "Tab 1", children: [...] }]`
-- `accordion` - Collapsible sections. Props: `items: [{ title: "Section", children: [...] }]`
-- `list` - Flex list. Props: `direction` (vertical/horizontal), `gap`, `align`
-- `modal` - Dialog popup. Props: `title`. First child = trigger button, rest = content.
+All functions are imported from `"claw2ui/dsl"`.
+
+### Page Entry
+
+```typescript
+page(title, components[], opts?)  // opts: { theme?: "light"|"dark"|"auto", style?: "anthropic"|"classic" }
+```
+
+### Layout (accept `...children`)
+
+```typescript
+container(...children)              // Outermost wrapper, always use this
+row(cols, ...children)              // Grid row: row(3, stat(...), stat(...), stat(...))
+column(span, ...children)           // Grid column within a row
+card(title, ...children)            // Card with border/shadow
+list(direction, ...children)        // "vertical" or "horizontal"
+modal(title, ...children)           // Dialog popup
+```
+
+### Special Containers
+
+```typescript
+tabs(                               // Tabbed sections
+  tab("id", "Label", ...children),
+  tab("id2", "Label 2", ...children),
+)
+
+accordion(                          // Collapsible sections
+  section("Title", ...children),
+  section("Title 2", ...children),
+)
+```
 
 ### Data Display
-- `stat` - KPI metric card. Props: `label`, `value`, `change` (percent, positive = green), `icon` (Material Icon name e.g. "payments", "group")
-  - Great for key metrics at the top of a dashboard
-  - Put 3-4 stats in a `row` with `cols: 3` or `cols: 4`
 
-- `table` - Searchable, sortable table. Props:
-  - `columns: [{ key: "name", label: "Name", format?: "currency"|"percent"|"badge" }]`
-  - `rows: [{ name: "value", ... }]`
-  - For badge format, add `badgeMap: { "Active": "success", "Down": "error" }`
+```typescript
+stat(label, value, opts?)           // opts: { change?: number, icon?: string }
+chart(chartType, data, opts?)       // opts: { height?, options?, legendPosition?, title? }
+table(columns, rows, opts?)         // opts: { searchable?, perPage? }
+```
 
-- `chart` - Chart.js chart. Props:
-  - `chartType`: `"line"`, `"bar"`, `"pie"`, `"doughnut"`, `"radar"`, `"polarArea"`, `"bubble"`, `"scatter"`
-  - `height`: pixels (default 300)
-  - `data`: standard Chart.js data format:
-    ```json
-    {
-      "labels": ["Jan", "Feb", "Mar"],
-      "datasets": [{
-        "label": "Revenue",
-        "data": [100, 200, 150],
-        "borderColor": "#3b82f6",
-        "backgroundColor": "rgba(59, 130, 246, 0.1)",
-        "tension": 0.3,
-        "fill": true
-      }]
-    }
-    ```
+### Helpers (for chart/table)
+
+```typescript
+dataset(label, data[], opts?)       // Chart.js dataset: dataset("Rev", [1,2,3], { borderColor: "red" })
+col(key, label?, format?)           // Column def: col("name", "Name", "currency")
+badge(key, label, badgeMap)         // Badge column: badge("status", "Status", { Active: "success" })
+months(n)                           // Month labels: months(6) → ["Jan","Feb","Mar","Apr","May","Jun"]
+```
 
 ### Input
-- `button` - Props: `label`, `variant` (`"primary"`, `"secondary"`, `"danger"`, `"outline"`)
-- `text-field` - Props: `label`, `placeholder`, `value`
-- `select` - Props: `label`, `options: [{ value: "a", label: "Option A" }]`
-- `checkbox` - Props: `label`, `value` (boolean)
-- `choice-picker` - Single/multi select. Props: `label`, `options: [{value, label}]`, `value: [selected]`, `variant` (mutuallyExclusive/multipleSelection), `displayStyle` (checkbox/chips)
-- `slider` - Range slider. Props: `label`, `min`, `max`, `value`
-- `date-time-input` - Date/time picker. Props: `label`, `value` (ISO 8601), `enableDate`, `enableTime`, `min`, `max`
+
+```typescript
+button(label, variant?)             // variant: "primary"|"secondary"|"danger"|"outline"
+textField(label?, opts?)            // opts: { placeholder?, value?, inputType? }
+select(label, options)              // options: [{ value: "a", label: "Option A" }]
+checkbox(label, value?)
+choicePicker(label, options, opts?) // opts: { value?, variant?, displayStyle? }
+slider(label, opts?)                // opts: { min?, max?, value? }
+dateTimeInput(label, opts?)         // opts: { value?, enableDate?, enableTime?, min?, max? }
+```
 
 ### Media & Text
-- `markdown` - Rich text with standard markdown syntax (headings, bold, lists, links, code blocks, etc.). Props: `content` (markdown string). Preferred for rich text content.
-- `icon` - Material Icon. Props: `name` (e.g. "settings", "search"), `size` (px)
-- `text` - Text paragraph. Props: `content`, `size` (`"sm"`, `"base"`, `"lg"`, `"xl"`), `bold` (boolean)
-- `code` - Code block. Props: `content`, `language`
-- `markdown` - Markdown content (sanitized). Props: `content`
-- `html` - Raw HTML (sanitized). Props: `content`
-- `image` - Props: `src`, `alt`
-- `video` - Video player. Props: `url`, `poster`
-- `audio-player` - Audio player. Props: `url`, `description`
-- `divider` - Horizontal line
-- `spacer` - Vertical space. Props: `size` (Tailwind spacing units, e.g. 4)
+
+```typescript
+markdown(content)                   // Renders markdown to styled HTML (preferred for rich text)
+text(content, opts?)                // opts: { size?, bold?, class? }
+code(content, language?)            // Code block with syntax highlighting
+html(content)                       // Raw HTML (sanitized server-side)
+icon(name, size?)                   // Material Icon: icon("settings", 24)
+image(src, alt?)
+video(url, poster?)
+audioPlayer(url, description?)
+divider()
+spacer(size?)
+```
 
 ### Navigation
-- `header` - Page header. Props: `title`, `subtitle`
-- `link` - Hyperlink. Props: `href`, `label`
+
+```typescript
+header(title, subtitle?)            // Page header
+link(href, label?, target?)         // Hyperlink
+```
+
+### Available Themes (`style` field)
+
+| Theme | Description |
+|-------|-------------|
+| `anthropic` | **(default)** Warm editorial aesthetic — Newsreader serif headings, terracotta accents, cream backgrounds |
+| `classic` | Original Tailwind look — blue accents, system fonts, gray surfaces |
+
+## Best Practices
+
+### Always use TypeScript DSL, not JSON
+
+The DSL is type-checked, uses ~60% fewer tokens, and supports logic. JSON specs are still supported but considered legacy.
+
+### Use loops and conditionals
+
+```typescript
+// Generate stats from data
+const metrics = [
+  { label: "CPU", value: "42%", icon: "monitor" },
+  { label: "Memory", value: "6.2 GB", icon: "memory" },
+  { label: "Disk", value: "120 MB/s", icon: "storage" },
+]
+row(3, ...metrics.map(m => stat(m.label, m.value, { icon: m.icon })))
+
+// Conditional rendering
+container(
+  header("Report"),
+  data.length > 0
+    ? card("Trend", chart("line", chartData))
+    : text("No data available"),
+)
+
+// Filter falsy values
+container(
+  header("Dashboard"),
+  showMetrics && row(3, stat("A", "1"), stat("B", "2"), stat("C", "3")),
+  card("Details", table(cols, rows)),
+)
+```
+
+### Prefer `col()` / `badge()` / `dataset()` helpers
+
+```typescript
+// Good — concise and readable
+table(
+  [col("name", "Name"), col("rev", "Revenue", "currency"), badge("status", "Status", { Active: "success" })],
+  rows,
+)
+
+// Avoid — verbose raw objects
+table(
+  [{ key: "name", label: "Name" }, { key: "rev", label: "Revenue", format: "currency" }, { key: "status", label: "Status", format: "badge", badgeMap: { Active: "success" } }],
+  rows,
+)
+```
+
+### Use `markdown()` for rich text
+
+```typescript
+card("About",
+  markdown(`
+## Features
+- **Fast** — sub-second rendering
+- **Secure** — sanitized HTML output
+- **Responsive** — mobile-first layouts
+
+> Built with Claw2UI
+  `),
+)
+```
+
+### Use `months()` for chart labels
+
+```typescript
+chart("bar", {
+  labels: months(6),
+  datasets: [dataset("Revenue", [100, 200, 150, 300, 250, 400])],
+})
+```
 
 ## Design Patterns
 
-### Dashboard Layout
-```
-container
-  header (title + subtitle)
-  row cols=3
-    stat (metric 1)
-    stat (metric 2)
-    stat (metric 3)
-  card (title: "Trend")
-    chart (line chart)
-  card (title: "Details")
-    table (data table)
-```
-
-### Report Layout
-```
-container
-  header
-  text (summary paragraph)
-  tabs
-    tab "Overview"
-      row cols=2
-        stat, stat
-      chart
-    tab "Details"
-      table
-    tab "Analysis"
-      text (analysis content)
-```
-
-### Comparison Layout
-```
-container
-  header
-  row cols=2
-    card "Option A"
-      stat, stat, text
-    card "Option B"
-      stat, stat, text
-  table (detailed comparison)
-```
-
-## Example: Complete Dashboard
-
-### TypeScript DSL (preferred)
+### Dashboard
 
 ```typescript
 import { page, container, header, row, stat, card, chart, table, col, badge, dataset } from "claw2ui/dsl"
 
-export default page("Sales Dashboard", [
+export default page("Dashboard", [
   container(
-    header("Sales Dashboard", "Q1 2026 Overview"),
+    header("Dashboard", "Overview"),
     row(3,
       stat("Revenue", "$1.2M", { change: 15.3, icon: "payments" }),
       stat("Orders", "8,432", { change: 8.1, icon: "shopping_cart" }),
       stat("Customers", "2,847", { change: -2.5, icon: "group" }),
     ),
-    card("Revenue Trend",
+    card("Trend",
       chart("line", {
-        labels: ["Jan", "Feb", "Mar"],
-        datasets: [dataset("Revenue", [320000, 410000, 480000], {
-          borderColor: "#3b82f6", tension: 0.3,
+        labels: months(6),
+        datasets: [dataset("Revenue", [320, 410, 380, 450, 480, 520], {
+          borderColor: "#3b82f6", tension: 0.3, fill: true,
+          backgroundColor: "rgba(59,130,246,0.1)",
         })],
       }, { height: 280 }),
     ),
-    card("Top Products",
+    card("Details",
       table(
-        [col("product", "Product"), col("revenue", "Revenue", "currency"),
-         badge("status", "Status", { Active: "success", "Low Stock": "warning" })],
+        [col("name", "Name"), col("value", "Value", "currency"), badge("status", "Status", { Active: "success", Inactive: "error" })],
         [
-          { product: "Widget Pro", revenue: 450000, status: "Active" },
-          { product: "Gadget X", revenue: 320000, status: "Low Stock" },
+          { name: "Product A", value: 450000, status: "Active" },
+          { name: "Product B", value: 320000, status: "Active" },
+          { name: "Product C", value: 0, status: "Inactive" },
         ],
       ),
     ),
@@ -312,43 +348,81 @@ export default page("Sales Dashboard", [
 ], { style: "anthropic" })
 ```
 
-### JSON spec
+### Report with Tabs
 
-```json
-{
-  "title": "Sales Dashboard",
-  "style": "anthropic",
-  "components": [
-    { "type": "container", "children": [
-      { "type": "header", "props": { "title": "Sales Dashboard", "subtitle": "Q1 2026 Overview" } },
-      { "type": "row", "props": { "cols": 3, "gap": 4 }, "children": [
-        { "type": "stat", "props": { "label": "Revenue", "value": "$1.2M", "change": 15.3, "icon": "payments" } },
-        { "type": "stat", "props": { "label": "Orders", "value": "8,432", "change": 8.1, "icon": "shopping_cart" } },
-        { "type": "stat", "props": { "label": "Customers", "value": "2,847", "change": -2.5, "icon": "group" } }
-      ]},
-      { "type": "card", "props": { "title": "Revenue Trend" }, "children": [
-        { "type": "chart", "props": {
-          "chartType": "line", "height": 280,
-          "data": {
-            "labels": ["Jan", "Feb", "Mar"],
-            "datasets": [{ "label": "Revenue", "data": [320000, 410000, 480000], "borderColor": "#3b82f6", "tension": 0.3, "fill": false }]
-          }
-        }}
-      ]},
-      { "type": "card", "props": { "title": "Top Products" }, "children": [
-        { "type": "table", "props": {
-          "columns": [
-            { "key": "product", "label": "Product" },
-            { "key": "revenue", "label": "Revenue", "format": "currency" },
-            { "key": "status", "label": "Status", "format": "badge", "badgeMap": { "Active": "success", "Low Stock": "warning" } }
+```typescript
+import { page, container, header, row, stat, card, chart, table, tabs, tab, text, markdown, col, dataset, months } from "claw2ui/dsl"
+
+export default page("Monthly Report", [
+  container(
+    header("Monthly Report", "March 2026"),
+    tabs(
+      tab("overview", "Overview",
+        row(3,
+          stat("Users", "12,847", { change: 18.5, icon: "group" }),
+          stat("Revenue", "$89K", { change: 24.3, icon: "payments" }),
+          stat("Churn", "3.2%", { change: -1.1, icon: "trending_down" }),
+        ),
+        card("Growth",
+          chart("line", {
+            labels: months(6),
+            datasets: [
+              dataset("Users", [8000, 9200, 10100, 11000, 11800, 12847], { borderColor: "#3b82f6" }),
+              dataset("Revenue", [52, 58, 65, 72, 81, 89], { borderColor: "#10b981", yAxisID: "y1" }),
+            ],
+          }),
+        ),
+      ),
+      tab("details", "Details",
+        table(
+          [col("page", "Page"), col("views", "Views"), col("bounce", "Bounce", "percent")],
+          [
+            { page: "/", views: "23,456", bounce: 28 },
+            { page: "/pricing", views: "12,567", bounce: 22 },
+            { page: "/docs", views: "9,876", bounce: 18 },
           ],
-          "rows": [
-            { "product": "Widget Pro", "revenue": 450000, "status": "Active" },
-            { "product": "Gadget X", "revenue": 320000, "status": "Low Stock" }
-          ]
-        }}
-      ]}
-    ]}
-  ]
-}
+        ),
+      ),
+      tab("notes", "Notes",
+        markdown("## Key Takeaways\n\n- Revenue up **24.3%** MoM\n- Churn improved by 1.1pp\n- `/pricing` page has lowest bounce rate"),
+      ),
+    ),
+  ),
+], { style: "anthropic" })
+```
+
+### Comparison
+
+```typescript
+import { page, container, header, row, card, stat, text, table, col } from "claw2ui/dsl"
+
+export default page("Plan Comparison", [
+  container(
+    header("Plan Comparison", "Choose the right plan"),
+    row(3,
+      card("Starter",
+        stat("Price", "$9/mo"),
+        text("5 users, 10 GB storage"),
+      ),
+      card("Pro",
+        stat("Price", "$29/mo", { icon: "star" }),
+        text("25 users, 100 GB storage"),
+      ),
+      card("Enterprise",
+        stat("Price", "Custom", { icon: "business" }),
+        text("Unlimited users, 1 TB storage"),
+      ),
+    ),
+    card("Feature Matrix",
+      table(
+        [col("feature", "Feature"), col("starter", "Starter"), col("pro", "Pro"), col("enterprise", "Enterprise")],
+        [
+          { feature: "Users", starter: "5", pro: "25", enterprise: "Unlimited" },
+          { feature: "Storage", starter: "10 GB", pro: "100 GB", enterprise: "1 TB" },
+          { feature: "Support", starter: "Email", pro: "Priority", enterprise: "Dedicated" },
+        ],
+      ),
+    ),
+  ),
+], { style: "anthropic" })
 ```
