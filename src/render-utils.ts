@@ -6,10 +6,38 @@
  * import from here rather than re-implementing.
  */
 import { marked } from 'marked';
+import sanitize from 'sanitize-html';
 import type { ColumnDef } from './types';
 
 // Configure marked for safe, synchronous rendering
 marked.setOptions({ async: false, gfm: true, breaks: true });
+
+/** sanitize-html whitelist config — shared by sanitizeHtml() and parseMarkdown() */
+const SANITIZE_OPTIONS: sanitize.IOptions = {
+  allowedTags: sanitize.defaults.allowedTags.concat([
+    'img', 'del', 'ins', 'details', 'summary', 'input',
+    'video', 'audio', 'source', 'picture',
+  ]),
+  allowedAttributes: {
+    '*': ['class', 'id', 'style'],
+    a: ['href', 'name', 'target', 'rel'],
+    img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading'],
+    details: ['open'],
+    input: ['type', 'checked', 'disabled'],
+    td: ['colspan', 'rowspan'],
+    th: ['colspan', 'rowspan'],
+    col: ['span'],
+    colgroup: ['span'],
+    video: ['src', 'poster', 'controls', 'width', 'height'],
+    audio: ['src', 'controls'],
+    source: ['src', 'type'],
+  },
+  allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+  allowedSchemesByTag: {
+    img: ['http', 'https', 'data'],
+  },
+  allowedSchemesAppliedToAttributes: ['href', 'src', 'cite', 'action'],
+};
 
 /* ------------------------------------------------------------------ */
 /*  Escaping                                                           */
@@ -49,42 +77,12 @@ export function escJsonInScript(json: string): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * Sanitize HTML: strip <script> tags, javascript: URLs, and on* event handlers.
+ * Sanitize HTML using a whitelist-based approach (sanitize-html library).
+ * Only tags and attributes in the whitelist are kept; everything else is stripped.
  */
 export function sanitizeHtml(html: string): string {
   if (typeof html !== 'string') return '';
-  return html
-    // Strip dangerous tags (script, iframe, object, embed, form, style, base, meta, link)
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<\/?script\b[^>]*>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<\/?iframe\b[^>]*>/gi, '')
-    .replace(/<\/?object\b[^>]*>/gi, '')
-    .replace(/<\/?embed\b[^>]*>/gi, '')
-    .replace(/<\/?form\b[^>]*>/gi, '')
-    .replace(/<\/?base\b[^>]*>/gi, '')
-    .replace(/<\/?meta\b[^>]*>/gi, '')
-    .replace(/<link\b[^>]*>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<\/?style\b[^>]*>/gi, '')
-    // Strip event handlers
-    .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    // Strip javascript: URLs — decode HTML entities first to catch &#58; / &#x3a; / &colon; variants
-    .replace(/(href\s*=\s*)(["'])([\s\S]*?)\2/gi, (m, attr, q, val) => {
-      const decoded = val.replace(/&#x([0-9a-f]+);/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)))
-        .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
-        .replace(/&colon;/gi, ':');
-      return /^\s*javascript\s*:/i.test(decoded) ? `${attr}${q}#${q}` : m;
-    })
-    .replace(/href\s*=\s*javascript:[^\s>]*/gi, 'href="#"')
-    .replace(/(src\s*=\s*)(["'])([\s\S]*?)\2/gi, (m, attr, q, val) => {
-      const decoded = val.replace(/&#x([0-9a-f]+);/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)))
-        .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
-        .replace(/&colon;/gi, ':');
-      return /^\s*javascript\s*:/i.test(decoded) ? `${attr}${q}${q}` : m;
-    })
-    .replace(/src\s*=\s*javascript:[^\s>]*/gi, 'src=""')
-    .replace(/srcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+  return sanitize(html, SANITIZE_OPTIONS);
 }
 
 /* ------------------------------------------------------------------ */
