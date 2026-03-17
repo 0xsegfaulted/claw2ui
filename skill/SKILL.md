@@ -9,15 +9,6 @@ metadata:
       bins:
         - node
         - claw2ui
-      optionalBins:
-        - cloudflared
-      env:
-        - name: CLAWBOARD_TUNNEL_NAME
-          required: false
-          description: "Cloudflare named tunnel ID (only for fixed-domain setup)"
-        - name: CLAWBOARD_TUNNEL_URL
-          required: false
-          description: "Public URL for named tunnel (e.g. https://board.yourdomain.com)"
     install:
       - id: claw2ui-npm
         kind: npm
@@ -25,36 +16,27 @@ metadata:
         bins: ["claw2ui"]
         label: "Install Claw2UI CLI (npm install -g claw2ui)"
         verify: "https://github.com/0xsegfaulted/claw2ui"
-      - id: cloudflared-brew
-        kind: brew
-        formula: cloudflared
-        bins: ["cloudflared"]
-        label: "Install cloudflared (optional, for fixed-domain tunnels)"
 ---
 
 # Claw2UI - Agent-to-UI Bridge
 
-Generate interactive web pages from declarative JSON specs and serve them via cloudflared tunnel. Pages include Tailwind CSS, Alpine.js, and Chart.js out of the box.
+Generate interactive web pages from declarative JSON specs and serve them via a public URL. Pages include Tailwind CSS, Alpine.js, and Chart.js out of the box, with pluggable themes and mobile-responsive layouts.
 
-> **Source & verification**: [GitHub](https://github.com/0xsegfaulted/claw2ui) · [npm](https://www.npmjs.com/package/claw2ui) · License: MIT
+> **Source**: [GitHub](https://github.com/0xsegfaulted/claw2ui) · [npm](https://www.npmjs.com/package/claw2ui) · [HF Space](https://huggingface.co/spaces/0xsegfaulted/claw2ui) · License: MIT
 
 ## Data Safety
 
 **Every published page is accessible via a public URL.** Follow these rules:
 
 - **Never include** secrets, credentials, API keys, tokens, PII, or internal endpoints in page content
-- **Sanitize** all user-provided data before embedding it in pages — the `html` component is sanitized server-side, but avoid passing raw untrusted input to other components
+- **Sanitize** all user-provided data before embedding — the `html` component is sanitized server-side, but avoid passing raw untrusted input to other components
 - **Always confirm with the user** before publishing. Do not publish pages without explicit user approval
 - **Use TTL** for ephemeral or sensitive data so pages auto-expire: `--ttl 3600000` (1 hour)
 - **Review content** before publishing — check that no sensitive information leaks through table rows, stat values, or chart labels
 
 ## Setup
 
-Claw2UI supports two modes: **remote** (connect to an existing server) and **local** (run your own server).
-
-### Remote Mode (Recommended for most users)
-
-Connect to a shared Claw2UI server. No tunnel or server setup needed.
+Claw2UI uses the public server at `https://0xsegfaulted-claw2ui.hf.space` by default. No local server needed.
 
 ```bash
 npm install -g claw2ui
@@ -62,103 +44,21 @@ claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
 # Done! Token saved to ~/.claw2ui.json automatically.
 ```
 
-If you received a token manually from the server admin:
+If you received a token manually from a server admin:
 
 ```bash
 claw2ui init --server https://0xsegfaulted-claw2ui.hf.space --token <your-token>
 ```
 
-### Local Mode (Run your own server)
-
-Clone the repo or install globally, then start the server:
-
-```bash
-claw2ui status                          # Check if server is running
-claw2ui start                           # Start server + tunnel
-claw2ui start --no-tunnel               # Start without tunnel (localhost only)
-```
-
-#### Fixed Domain (Named Tunnel)
-
-For a permanent URL instead of random quick tunnels. **Requires**: Cloudflare account + `cloudflared`.
-
-```bash
-# One-time setup:
-# cloudflared tunnel login
-# cloudflared tunnel create claw2ui
-# cloudflared tunnel route dns claw2ui board.yourdomain.com
-
-export CLAWBOARD_TUNNEL_NAME=claw2ui
-export CLAWBOARD_TUNNEL_URL=https://board.yourdomain.com
-claw2ui start
-```
-
-#### Server Admin: Token Management
-
-Generate tokens for other users to connect to your server:
-
-```bash
-claw2ui token create                    # Generate a new token (run from project dir)
-claw2ui token list                      # List all config tokens
-claw2ui token revoke <token>            # Remove a config token
-```
-
-Registered tokens (from `/api/register`) can be managed via the admin API:
-
-```bash
-# List registered tokens (requires admin token)
-curl -H "Authorization: Bearer <admin-token>" https://board.example.com/api/tokens
-
-# Revoke by short ID
-curl -X POST -H "Authorization: Bearer <admin-token>" https://board.example.com/api/tokens/<id>/revoke
-```
-
-## CLI Tool
-
-All operations go through the `claw2ui` CLI. Install via `npm install -g claw2ui` ([npm registry](https://www.npmjs.com/package/claw2ui)).
-
-### Commands
-
-```bash
-# Connection (remote users)
-claw2ui register --server <url>         # Self-service registration with a remote server
-claw2ui init --server <url> --token <t> # Manual remote server config
-
-# Publish a page
-claw2ui publish --spec-file /tmp/page.json --title "Dashboard"
-claw2ui publish --html "<h1>Hello</h1>" --title "Test"
-claw2ui publish --ttl 3600000 --spec-file /tmp/page.json --title "Temp"     # With TTL (ms)
-claw2ui publish --spec-file /tmp/page.json --style anthropic --title "Report" # With theme
-
-# Themes
-claw2ui themes                          # List available themes
-
-# Manage pages (admin/privileged only)
-claw2ui list                            # List all pages
-claw2ui delete <page-id>                # Delete a page
-
-# Server lifecycle (local mode only)
-claw2ui status                          # Check if server is running
-claw2ui start                           # Start server + tunnel
-
-# Token management (server admin only, run from project dir)
-claw2ui token create                    # Generate a new config token
-claw2ui token list                      # List config tokens
-claw2ui token revoke <token>            # Remove a config token
-```
+> **Self-hosting**: To run your own Claw2UI server (local, Docker, or HF Space), see the [self-hosting guide](ref/self-hosting.md).
 
 ## Workflow
 
 ### Step 1: Ensure Connection
 
 ```bash
-# Remote: register once (token saved to ~/.claw2ui.json)
+# Register once (token saved to ~/.claw2ui.json)
 claw2ui register --server https://0xsegfaulted-claw2ui.hf.space
-
-# Local: ensure server is running
-claw2ui status
-# If not running:
-claw2ui start
 ```
 
 ### Step 2: Build the A2UI Spec
@@ -203,6 +103,8 @@ Only after user confirmation:
 claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard"
 # For sensitive/temporary data, always set a TTL:
 claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Dashboard" --ttl 3600000
+# With a specific theme:
+claw2ui publish --spec-file /tmp/claw2ui_page.json --title "Report" --style classic
 ```
 
 Outputs the public URL.
@@ -210,6 +112,28 @@ Outputs the public URL.
 ### Step 5: Share the URL
 
 Include the URL in your response to the user.
+
+## CLI Commands
+
+```bash
+# Connection
+claw2ui register --server <url>         # Self-service registration
+claw2ui init --server <url> --token <t> # Manual config
+
+# Publish
+claw2ui publish --spec-file <file> --title "Title"      # From JSON spec
+claw2ui publish --html "<h1>Hi</h1>" --title "Test"     # Raw HTML
+claw2ui publish --spec-file <file> --style classic       # With theme
+claw2ui publish --spec-file <file> --ttl 3600000         # With TTL (ms)
+
+# Themes
+claw2ui themes                          # List available themes
+
+# Manage pages
+claw2ui list                            # List all pages
+claw2ui delete <page-id>               # Delete a page
+claw2ui status                          # Check server status
+```
 
 ## Available Components
 
@@ -224,7 +148,7 @@ Include the URL in your response to the user.
 - `modal` - Dialog popup. Props: `title`. First child = trigger button, rest = content.
 
 ### Data Display
-- `stat` - KPI metric card. Props: `label`, `value`, `change` (percent, positive = green), `icon` (emoji)
+- `stat` - KPI metric card. Props: `label`, `value`, `change` (percent, positive = green), `icon` (Material Icon name e.g. "payments", "group")
   - Great for key metrics at the top of a dashboard
   - Put 3-4 stats in a `row` with `cols: 3` or `cols: 4`
 
@@ -234,7 +158,7 @@ Include the URL in your response to the user.
   - For badge format, add `badgeMap: { "Active": "success", "Down": "error" }`
 
 - `chart` - Chart.js chart. Props:
-  - `chartType`: `"line"`, `"bar"`, `"pie"`, `"doughnut"`, `"radar"`
+  - `chartType`: `"line"`, `"bar"`, `"pie"`, `"doughnut"`, `"radar"`, `"polarArea"`, `"bubble"`, `"scatter"`
   - `height`: pixels (default 300)
   - `data`: standard Chart.js data format:
     ```json
@@ -264,6 +188,7 @@ Include the URL in your response to the user.
 - `icon` - Material Icon. Props: `name` (e.g. "settings", "search"), `size` (px)
 - `text` - Text paragraph. Props: `content`, `size` (`"sm"`, `"base"`, `"lg"`, `"xl"`), `bold` (boolean)
 - `code` - Code block. Props: `content`, `language`
+- `markdown` - Markdown content (sanitized). Props: `content`
 - `html` - Raw HTML (sanitized). Props: `content`
 - `image` - Props: `src`, `alt`
 - `video` - Video player. Props: `url`, `poster`
@@ -324,13 +249,14 @@ container
 ```json
 {
   "title": "Sales Dashboard",
+  "style": "anthropic",
   "components": [
     { "type": "container", "children": [
       { "type": "header", "props": { "title": "Sales Dashboard", "subtitle": "Q1 2026 Overview" } },
       { "type": "row", "props": { "cols": 3, "gap": 4 }, "children": [
-        { "type": "stat", "props": { "label": "Revenue", "value": "$1.2M", "change": 15.3, "icon": "💰" } },
-        { "type": "stat", "props": { "label": "Orders", "value": "8,432", "change": 8.1, "icon": "📦" } },
-        { "type": "stat", "props": { "label": "Customers", "value": "2,847", "change": -2.5, "icon": "👥" } }
+        { "type": "stat", "props": { "label": "Revenue", "value": "$1.2M", "change": 15.3, "icon": "payments" } },
+        { "type": "stat", "props": { "label": "Orders", "value": "8,432", "change": 8.1, "icon": "shopping_cart" } },
+        { "type": "stat", "props": { "label": "Customers", "value": "2,847", "change": -2.5, "icon": "group" } }
       ]},
       { "type": "card", "props": { "title": "Revenue Trend" }, "children": [
         { "type": "chart", "props": {

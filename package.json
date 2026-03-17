@@ -1,6 +1,6 @@
 {
   "name": "claw2ui",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Agent-to-UI bridge: serve interactive pages from IM agents via tunnel",
   "main": "dist/server.js",
   "bin": {
