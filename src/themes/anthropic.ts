@@ -577,7 +577,7 @@ function getDesignCSS(): string {
     .c2u-stat:hover{box-shadow:0 2px 16px rgba(0,0,0,0.06)}
     .dark .c2u-stat:hover{box-shadow:0 2px 16px rgba(0,0,0,0.2)}
     .c2u-stat-label{font-size:clamp(0.7rem,1.5vw,0.8rem);font-weight:600;color:var(--c2u-text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:clamp(4px,1vw,8px)}
-    .c2u-stat-value{font-family:'Source Code Pro',monospace;font-size:clamp(1.25rem,3vw + 0.25rem,1.75rem);font-weight:700;color:var(--c2u-text-heading);line-height:1.2}
+    .c2u-stat-value{font-family:'Source Code Pro',monospace;font-size:clamp(1.25rem,3vw + 0.25rem,1.75rem);font-weight:700;color:var(--c2u-text-heading);line-height:1.2;overflow-wrap:break-word;word-break:break-word;min-width:0}
     .c2u-stat-change{font-family:'Source Code Pro',monospace;font-size:0.8rem;font-weight:600;margin-top:clamp(4px,1vw,8px)}
     .c2u-up{color:var(--c2u-success)}
     .c2u-down{color:var(--c2u-error)}

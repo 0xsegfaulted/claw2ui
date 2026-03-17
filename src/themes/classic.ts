@@ -484,7 +484,7 @@ const theme: Theme = {
       .c2u-classic-tabs-nav button{white-space:nowrap;flex-shrink:0;padding:clamp(0.5rem,1.5vw,0.75rem) clamp(0.625rem,2vw,1rem);font-size:clamp(0.8rem,1.5vw,0.875rem)}
       .c2u-classic-stat{padding:clamp(0.875rem,3vw,1.25rem)}
       .c2u-classic-stat .text-sm{font-size:clamp(0.7rem,1.5vw,0.875rem)}
-      .c2u-classic-stat .text-2xl{font-size:clamp(1.25rem,3vw + 0.25rem,1.5rem)}
+      .c2u-classic-stat .text-2xl{font-size:clamp(1.25rem,3vw + 0.25rem,1.5rem);overflow-wrap:break-word;word-break:break-word;min-width:0}
       .c2u-classic-stat .text-3xl{font-size:clamp(1.25rem,2.5vw + 0.5rem,1.875rem);flex-shrink:0;line-height:1}
       .c2u-classic-card-header{padding:clamp(0.625rem,2vw,1rem) clamp(0.875rem,2.5vw,1.25rem)}
       .c2u-classic-card-body{padding:clamp(0.625rem,2vw,1rem) clamp(0.875rem,2.5vw,1.25rem)}
