@@ -1,21 +1,7 @@
 ---
 name: claw2ui
-description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill whenever the user asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or ANY content that would be better presented as a web page than plain text. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "claw2ui". Even if the user doesn''t explicitly ask for a web page, if the response would benefit from charts, sortable tables, or rich layout, use Claw2UI proactively. Chinese triggers: "做个仪表盘", "画个图表", "做个报表", "生成一个页面", "做个dashboard", "数据可视化", "做个网页", "展示数据", "做个表格", "做个图", "发布一个页面", "做个看板". Additional English triggers: "create a webpage", "show analytics", "build a status page", "make a chart", "data overview", "show me stats", "create a board", "render a page", "comparison chart", "trend analysis", "pie chart", "bar chart", "line chart", "KPI dashboard", "metrics overview", "weekly report", "monthly report".'
+description: 'Generate interactive web pages (dashboards, charts, tables, reports) and serve them via public URL. Use this skill when the user explicitly asks for data visualization, dashboards, analytics reports, comparison tables, status pages, or web-based content. Also triggers for: "draw me a chart", "make a dashboard", "show me a table", "generate a report", "visualize this data", "render this as a page", "publish a page", "claw2ui". If the response would benefit from charts, sortable tables, or rich layout, **suggest** using Claw2UI and wait for user confirmation before publishing. Chinese triggers: "做个仪表盘", "画个图表", "做个报表", "生成一个页面", "做个dashboard", "数据可视化", "做个网页", "展示数据", "做个表格", "做个图", "发布一个页面", "做个看板". Additional English triggers: "create a webpage", "show analytics", "build a status page", "make a chart", "data overview", "show me stats", "create a board", "render a page", "comparison chart", "trend analysis", "pie chart", "bar chart", "line chart", "KPI dashboard", "metrics overview", "weekly report", "monthly report".'
 license: MIT
-metadata:
-  openclaw:
-    emoji: "📊"
-    requires:
-      bins:
-        - node
-        - claw2ui
-    install:
-      - id: claw2ui-npm
-        kind: npm
-        package: claw2ui
-        bins: ["claw2ui"]
-        label: "Install Claw2UI CLI (npm install -g claw2ui)"
-        verify: "https://github.com/0xsegfaulted/claw2ui"
 ---
 
 # Claw2UI - Agent-to-UI Bridge
@@ -24,13 +10,13 @@ Generate interactive web pages from declarative JSON specs and serve them via a 
 
 > **Source**: [GitHub](https://github.com/0xsegfaulted/claw2ui) · [npm](https://www.npmjs.com/package/claw2ui) · [HF Space](https://huggingface.co/spaces/0xsegfaulted/claw2ui) · License: MIT
 
-## Data Safety
+## Data Safety & User Confirmation
 
-**Every published page is accessible via a public URL.** Follow these rules:
+**Every published page is accessible via a public URL. Never publish without explicit user approval.**
 
+- **Always confirm with the user** before publishing — describe what will be published and wait for explicit "yes"/"go ahead". Silent publishing is never acceptable
 - **Never include** secrets, credentials, API keys, tokens, PII, or internal endpoints in page content
 - **Sanitize** all user-provided data before embedding — the `html` component is sanitized server-side, but avoid passing raw untrusted input to other components
-- **Always confirm with the user** before publishing. Do not publish pages without explicit user approval
 - **Use TTL** for ephemeral or sensitive data so pages auto-expire: `--ttl 3600000` (1 hour)
 - **Review content** before publishing — check that no sensitive information leaks through table rows, stat values, or chart labels
 

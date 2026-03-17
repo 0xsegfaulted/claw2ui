@@ -168,14 +168,16 @@ claw2ui init --server https://your-server-url --token <token>
 
 ## Backup (HF Dataset)
 
-When `HF_TOKEN` and `CLAWBOARD_BACKUP_REPO` are set, Claw2UI automatically:
+Backup is **opt-in** — it only activates when both `HF_TOKEN` and `CLAWBOARD_BACKUP_REPO` are explicitly set. Without these, no data leaves the server.
 
-- **On startup**: downloads `backup.json` from the HF Dataset and restores all pages and tokens
-- **On mutation**: debounced (5s) upload of all pages and tokens to `backup.json`
+When enabled, Claw2UI automatically:
+
+- **On startup**: downloads `backup.json` from the HF Dataset and restores pages and token metadata
+- **On mutation**: debounced (5s) upload of pages and token metadata to `backup.json`
 
 ### Setup
 
-1. Create a private dataset:
+1. Create a **private** dataset (public datasets would expose your data):
    ```bash
    hf repos create yourname/claw2ui-data --type dataset --private
    ```
@@ -189,7 +191,14 @@ When `HF_TOKEN` and `CLAWBOARD_BACKUP_REPO` are set, Claw2UI automatically:
 ### What's backed up
 
 - All page data (HTML, metadata, view counts)
-- All registered tokens (with usage stats)
+- Registered token metadata (creation time, IP, usage stats, disabled state)
+
+### Security considerations
+
+- The backup dataset **must be private** — it contains page content and token metadata
+- Backup is entirely opt-in: if you don't set `HF_TOKEN` and `CLAWBOARD_BACKUP_REPO`, no backup occurs and no data is uploaded anywhere
+- The admin token (`CLAWBOARD_TOKEN`) is **never** included in backups — it exists only as an env var or in the local `.api-token` file
+- Verify your HF Dataset is set to private: `hf repos settings yourname/claw2ui-data --private`
 
 ### Limitations
 
