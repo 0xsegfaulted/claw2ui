@@ -3,6 +3,15 @@
   "version": "2.1.1",
   "description": "Agent-to-UI bridge: serve interactive pages from IM agents via tunnel",
   "main": "dist/server.js",
+  "exports": {
+    ".": "./dist/server.js",
+    "./dsl": "./dist/dsl/index.js"
+  },
+  "typesVersions": {
+    "*": {
+      "dsl": ["dist/dsl/index.d.ts"]
+    }
+  },
   "bin": {
     "claw2ui": "./bin/claw2ui.js"
   },
@@ -50,6 +59,7 @@
     "marked": "^15.0.12",
     "nanoid": "^3.3.11",
     "sanitize-html": "^2.17.1",
+    "typescript": "^5.9.3",
     "uuid": "^13.0.0"
   },
   "optionalDependencies": {
@@ -58,7 +68,6 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
-    "@types/sanitize-html": "^2.16.1",
-    "typescript": "^5.9.3"
+    "@types/sanitize-html": "^2.16.1"
   }
 }
