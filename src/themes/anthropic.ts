@@ -581,7 +581,7 @@ function getDesignCSS(): string {
     .c2u-stat-change{font-family:'Source Code Pro',monospace;font-size:0.8rem;font-weight:600;margin-top:clamp(4px,1vw,8px)}
     .c2u-up{color:var(--c2u-success)}
     .c2u-down{color:var(--c2u-error)}
-    .c2u-stat-icon{font-size:clamp(1.25rem,2.5vw + 0.5rem,2rem);opacity:0.5;flex-shrink:0;max-width:clamp(2rem,8vw,3.5rem);overflow:hidden;text-overflow:ellipsis;line-height:1}
+    .c2u-stat-icon{font-size:clamp(1.25rem,2.5vw + 0.5rem,2rem);opacity:0.5;flex-shrink:0;line-height:1}
 
     .c2u-table-wrap{border-radius:var(--c2u-radius);border:1px solid var(--c2u-border);overflow:hidden}
     .c2u-table{width:100%;border-collapse:collapse}

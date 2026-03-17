@@ -630,15 +630,15 @@ describe('mobile responsive - structural media queries', () => {
 });
 
 describe('mobile responsive - stat icon constrained', () => {
-  it('anthropic stat icon has flex-shrink and max-width', () => {
+  it('anthropic stat icon has fluid font-size and flex-shrink', () => {
     const html = renderPage({
       title: 'Test',
       style: 'anthropic',
       components: [{ type: 'stat', props: { label: 'X', value: '1', icon: 'chat' } }],
     });
     assert.ok(html.includes('flex-shrink:0'));
-    assert.ok(html.includes('max-width:clamp('));
-    assert.ok(html.includes('text-overflow:ellipsis'));
+    assert.ok(html.includes('.c2u-stat-icon{font-size:clamp('));
+    assert.ok(!html.includes('text-overflow:ellipsis'));
   });
 
   it('classic stat icon has fluid sizing via CSS', () => {
