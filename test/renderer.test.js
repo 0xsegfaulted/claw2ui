@@ -513,6 +513,12 @@ describe('mobile responsive - row grid', () => {
     assert.ok(!html.includes('lg:grid-cols'));
   });
 
+  it('clamps cols > 12 to Tailwind max (grid-cols-12)', () => {
+    const html = renderComponent({ type: 'row', props: { cols: 16 }, children: [] });
+    assert.ok(html.includes('sm:grid-cols-12'));
+    assert.ok(!html.includes('grid-cols-16'));
+  });
+
   it('classic theme also uses responsive grid', () => {
     const html = renderComponent({ type: 'row', props: { cols: 3 }, children: [] }, 'classic');
     assert.ok(html.includes('grid-cols-1'));
